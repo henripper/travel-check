@@ -8,6 +8,7 @@ A phone-friendly web app for planning a day on Rhodes, Greece. It works on both 
 - **Each place shows:** rating, cost (Free / € / €€ / €€€ with an approximate price), distance, walking time or "transport needed", how long to allow there, tips, and how to get there.
 - **Marks:** ✓ Done, ✕ Ignore (hidden from now on) and ☆ Today. Everything is saved on your phone.
 - **Today tab:** orders your picked stops into a loop from your stay, with leg distances, total time and entry costs. One tap opens the whole route in Google Maps. You can also ask it to suggest a walking day or a day trip.
+- **Languages:** English and Estonian (eesti keel). Use the picker in the top bar. It starts in Estonian on phones set to Estonian.
 - **Map tab:** OpenStreetMap with colour-coded pins and a 2 km walking circle.
 
 ## Use it on your phone
@@ -22,6 +23,9 @@ Settings → Pages → *Build and deployment* → Source: **Deploy from a branch
 After about a minute, the app is live at `https://<your-username>.github.io/travel-check/`.
 
 ## Editing places
+
+Estonian text for each place is in `pois-et.js`, and the interface text is in `i18n.js`. If a translation is missing, the app shows the English text instead.
+
 
 All places are in `pois.js`. Each one has coordinates, a category, an era, a rating from 1 to 5, a cost level (0 means free, up to 3), a price note, the suggested minutes to spend there, a description, a tip, and optionally `how` (getting there).
 

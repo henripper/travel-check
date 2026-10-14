@@ -24,7 +24,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: /^et\b/i.test(navigator.language || "") ? "et" : "en", base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -34,6 +34,31 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* private mode etc. */ }
 }
 
+// ---------- Language ----------
+const T = () => STRINGS[state.lang] || STRINGS.en;
+function t(key, ...args) {
+  const v = T()[key] ?? STRINGS.en[key];
+  return typeof v === "function" ? v(...args) : v;
+}
+// Place text in the current language, falling back to English.
+function loc(p, field) {
+  const tr = state.lang === "et" ? POIS_ET[p.id] : null;
+  return (tr && tr[field]) || p[field];
+}
+const catLabel = c => T().cats[c] || STRINGS.en.cats[c];
+const eraLabel = e => T().eras[e] || STRINGS.en.eras[e];
+const dec = s => state.lang === "et" ? s.replace(/(\d)\.(\d)/g, "$1,$2") : s;
+
+function applyStaticText() {
+  document.documentElement.lang = state.lang;
+  document.title = t("title");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  $("#langSel").innerHTML = Object.entries(LANGS)
+    .map(([k, v]) => `<option value="${k}" ${k === state.lang ? "selected" : ""}>${k === "et" ? "🇪🇪" : "🇬🇧"} ${v}</option>`).join("");
+  $("#presets").innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${esc(T().presets[p.name] || p.name)}</button>`).join("");
+}
+
 // ---------- Geo helpers ----------
 function km(a, b) {
   const R = 6371, rad = Math.PI / 180;
@@ -41,7 +66,7 @@ function km(a, b) {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
-function fmtKm(d) { return d < 1 ? `${Math.round(d * 1000 / 10) * 10} m` : `${d.toFixed(d < 10 ? 1 : 0)} km`; }
+function fmtKm(d) { return d < 1 ? `${Math.round(d * 1000 / 10) * 10} m` : dec(`${d.toFixed(d < 10 ? 1 : 0)} km`); }
 function fmtMin(m) {
   m = Math.max(1, Math.round(m));
   if (m < 60) return `${m} min`;
@@ -52,9 +77,9 @@ function walkMin(d) { return d * ROUTE_FACTOR / WALK_KMH * 60; }
 function driveMin(d) { return d * ROUTE_FACTOR / DRIVE_KMH * 60 + 5; }
 
 function travel(d) {
-  if (d <= EASY_WALK_KM) return { kind: "walk", label: `🚶 ${fmtMin(walkMin(d))} walk`, cls: "walk" };
-  if (d <= MAX_WALK_KM) return { kind: "longwalk", label: `🚶 ${fmtMin(walkMin(d))} walk · or 🚕 ${fmtMin(driveMin(d))}`, cls: "longwalk" };
-  return { kind: "ride", label: `🚌 Transport needed · ~${fmtMin(driveMin(d))} by car`, cls: "ride" };
+  if (d <= EASY_WALK_KM) return { kind: "walk", label: t("walk", fmtMin(walkMin(d))), cls: "walk" };
+  if (d <= MAX_WALK_KM) return { kind: "longwalk", label: t("longWalk", fmtMin(walkMin(d)), fmtMin(driveMin(d))), cls: "longwalk" };
+  return { kind: "ride", label: t("ride", fmtMin(driveMin(d))), cls: "ride" };
 }
 
 function mapsLink(dest, mode, origin) {
@@ -96,9 +121,9 @@ function exploreItems() {
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-function stars(r) { return `<span class="stars">★ ${r.toFixed(1)}</span>`; }
+function stars(r) { return `<span class="stars">★ ${dec(r.toFixed(1))}</span>`; }
 function costPill(p) {
-  if (p.cost === 0) return `<span class="pill free">Free</span>`;
+  if (p.cost === 0) return `<span class="pill free">${t("free")}</span>`;
   return `<span class="pill paid">${"€".repeat(p.cost)}</span>`;
 }
 
@@ -106,31 +131,31 @@ function card(p, opts = {}) {
   const cat = CATEGORIES[p.cat];
   const st = state.status[p.id];
   const inToday = state.today.includes(p.id);
-  const t = isNaN(p.d) ? null : travel(p.d);
+  const tr = isNaN(p.d) ? null : travel(p.d);
   const beyond = !isNaN(p.d) && p.d > state.range;
-  const mode = t && t.kind !== "ride" ? "walking" : "driving";
+  const mode = tr && tr.kind !== "ride" ? "walking" : "driving";
   return `
   <article class="card ${opts.collapsed ? "collapsed" : ""} ${st || ""}" data-id="${p.id}">
     <div class="card-head" data-toggle>
       <div class="card-icon">${cat.icon}</div>
       <div class="card-title">
-        <h3>${esc(p.name)}</h3>
+        <h3>${esc(loc(p, "name"))}</h3>
         <div class="meta">
-          ${stars(p.rating)} · ${cat.label} ${costPill(p)}
-          <span class="pill era">${ERAS[p.era]}</span>
-          ${beyond && p.rating >= MUST_SEE ? `<span class="pill must">Must-see</span>` : ""}
+          ${stars(p.rating)} · ${catLabel(p.cat)} ${costPill(p)}
+          <span class="pill era">${eraLabel(p.era)}</span>
+          ${beyond && p.rating >= MUST_SEE ? `<span class="pill must">${t("mustSeePill")}</span>` : ""}
         </div>
       </div>
-      ${isNaN(p.d) ? "" : `<div class="dist"><b>${fmtKm(p.d)}</b>from stay</div>`}
+      ${isNaN(p.d) ? "" : `<div class="dist"><b>${fmtKm(p.d)}</b>${t("fromStay")}</div>`}
     </div>
-    ${t ? `<div class="travel"><span class="pill ${t.cls}">${t.label}</span><span class="muted">· allow ${fmtMin(p.mins)} there</span></div>` : ""}
-    <p class="desc">${esc(p.desc)}</p>
-    <p class="extra"><b>Cost:</b> ${esc(p.price)}${p.tip ? `<br><b>Tip:</b> ${esc(p.tip)}` : ""}${p.how ? `<br><b>Getting there:</b> ${esc(p.how)}` : ""}</p>
+    ${tr ? `<div class="travel"><span class="pill ${tr.cls}">${tr.label}</span><span class="muted">${t("allow", fmtMin(p.mins))}</span></div>` : ""}
+    <p class="desc">${esc(loc(p, "desc"))}</p>
+    <p class="extra"><b>${t("cost")}:</b> ${esc(loc(p, "price"))}${p.tip ? `<br><b>${t("tip")}:</b> ${esc(loc(p, "tip"))}` : ""}${p.how ? `<br><b>${t("how")}:</b> ${esc(loc(p, "how"))}` : ""}</p>
     <div class="actions">
-      <button data-act="today" class="${inToday ? "on-today" : ""}">${inToday ? "★ Today" : "☆ Today"}</button>
-      <button data-act="done" class="${st === "done" ? "on-done" : ""}">✓ Done</button>
-      <button data-act="ignored" class="${st === "ignored" ? "on-ignored" : ""}">${st === "ignored" ? "✕ Ignored" : "✕ Ignore"}</button>
-      <a href="${mapsLink(p, mode, opts.from)}" target="_blank" rel="noopener">🧭 Go</a>
+      <button data-act="today" class="${inToday ? "on-today" : ""}">${t(inToday ? "onToday" : "todayBtn")}</button>
+      <button data-act="done" class="${st === "done" ? "on-done" : ""}">${t("done")}</button>
+      <button data-act="ignored" class="${st === "ignored" ? "on-ignored" : ""}">${t(st === "ignored" ? "ignored" : "ignore")}</button>
+      <a href="${mapsLink(p, mode, opts.from)}" target="_blank" rel="noopener">${t("go")}</a>
     </div>
   </article>`;
 }
@@ -141,29 +166,29 @@ function renderExplore() {
   $("#sortSel").value = state.sort;
   $("#costSel").value = state.cost;
   $("#catChips").innerHTML =
-    `<button class="chip ${state.cats.length ? "" : "on"}" data-cat="">All</button>` +
+    `<button class="chip ${state.cats.length ? "" : "on"}" data-cat="">${t("all")}</button>` +
     Object.entries(CATEGORIES).map(([k, c]) =>
-      `<button class="chip ${state.cats.includes(k) ? "on" : ""}" data-cat="${k}">${c.icon} ${c.label}</button>`).join("");
+      `<button class="chip ${state.cats.includes(k) ? "on" : ""}" data-cat="${k}">${c.icon} ${catLabel(k)}</button>`).join("");
 
   const items = exploreItems();
   const inRange = items.filter(p => !(p.d > state.range)).length;
   const hidden = Object.keys(state.status).length;
   $("#exploreCount").textContent = state.base
-    ? `${inRange} within range${items.length > inRange ? ` + ${items.length - inRange} must-see further away` : ""}${hidden ? ` · ${hidden} done/ignored hidden` : ""}`
-    : "Set where you're staying to see distances.";
+    ? t("withinRange", inRange) + (items.length > inRange ? t("mustFurther", items.length - inRange) : "") + (hidden ? t("hiddenCount", hidden) : "")
+    : t("setStayHint");
   $("#exploreList").innerHTML = items.length
     ? items.map(p => card(p, { collapsed: true })).join("")
-    : `<div class="empty">Nothing matches. Try a wider range or another category.</div>`;
+    : `<div class="empty">${t("emptyExplore")}</div>`;
 }
 
 function renderMine() {
   const which = document.querySelector("#mineSeg .on").dataset.status;
   const items = POIS.filter(p => state.status[p.id] === which).map(withDistance).sort((a, b) => a.d - b.d);
   const done = POIS.filter(p => state.status[p.id] === "done").length;
-  $("#mineCount").textContent = `Visited ${done} of ${POIS.length} places`;
+  $("#mineCount").textContent = t("visited", done, POIS.length);
   $("#mineList").innerHTML = items.length
     ? items.map(p => card(p, { collapsed: true })).join("")
-    : `<div class="empty">${which === "done" ? "Nothing marked done yet." : "Nothing ignored."}</div>`;
+    : `<div class="empty">${t(which === "done" ? "noneDone" : "noneIgnored")}</div>`;
 }
 
 // Order today's stops as a nearest-neighbour loop from the base.
@@ -190,16 +215,16 @@ function renderToday() {
 
   if (!stops.length) {
     $("#todaySummary").innerHTML = "";
-    $("#todayList").innerHTML = `<div class="empty">Tap <b>☆ Today</b> on any place, or let the app suggest a day.</div>`;
+    $("#todayList").innerHTML = `<div class="empty">${t("todayEmpty")}</div>`;
     return;
   }
   let html = "", walkKm = 0, rideKm = 0, visit = 0;
   stops.forEach((p, i) => {
     visit += p.mins;
     if (!isNaN(p.leg)) {
-      const t = travel(p.leg);
-      if (t.kind === "ride") rideKm += p.leg; else walkKm += p.leg;
-      html += `<div class="leg">${i === 0 ? "From your stay" : "Then"}: ${fmtKm(p.leg)} · ${t.label}</div>`;
+      const tr = travel(p.leg);
+      if (tr.kind === "ride") rideKm += p.leg; else walkKm += p.leg;
+      html += `<div class="leg">${t(i === 0 ? "legFirst" : "legThen")}: ${fmtKm(p.leg)} · ${tr.label}</div>`;
     }
     html += card(p, { collapsed: false, from: p.prev });
   });
@@ -207,7 +232,7 @@ function renderToday() {
   const last = stops[stops.length - 1];
   if (state.base) {
     const back = km(last, state.base);
-    html += `<div class="leg">Back to your stay: ${fmtKm(back)} · ${travel(back).label}</div>`;
+    html += `<div class="leg">${t("legBack")}: ${fmtKm(back)} · ${travel(back).label}</div>`;
     if (travel(back).kind === "ride") { rideKm += back; travelMin += driveMin(back); }
     else { walkKm += back; travelMin += walkMin(back); }
   }
@@ -222,14 +247,14 @@ function renderToday() {
 
   $("#todaySummary").innerHTML = `
     <div class="summary">
-      <div><b>${stops.length} stops</b> · about ${fmtMin(visit + travelMin)} including travel</div>
+      <div><b>${t("stops", stops.length)}</b> · ${t("aboutTotal", fmtMin(visit + travelMin))}</div>
       <div class="muted small">
-        🚶 ${fmtKm(walkKm * ROUTE_FACTOR)} on foot${rideKm ? ` · 🚌 ${fmtKm(rideKm * ROUTE_FACTOR)} by transport` : ""}
-        · ${fmtMin(visit)} sightseeing
-        · entry costs: ${stops.every(p => p.cost === 0) ? "all free 🎉" : stops.filter(p => p.cost > 0).map(p => esc(p.price.split(" (")[0])).join(", ")}
+        🚶 ${fmtKm(walkKm * ROUTE_FACTOR)} ${t("onFoot")}${rideKm ? ` · 🚌 ${fmtKm(rideKm * ROUTE_FACTOR)} ${t("byTransport")}` : ""}
+        · ${fmtMin(visit)} ${t("sightseeing")}
+        · ${t("entryCosts")}: ${stops.every(p => p.cost === 0) ? t("allFree") : stops.filter(p => p.cost > 0).map(p => esc(loc(p, "price").split(" (")[0])).join(", ")}
       </div>
-      <a class="btn primary" href="https://www.google.com/maps/dir/?${params}" target="_blank" rel="noopener">Open route in Google Maps (${allWalk ? "walking" : "driving"})</a>
-      <button class="btn ghost" id="clearToday" type="button">Clear today</button>
+      <a class="btn primary" href="https://www.google.com/maps/dir/?${params}" target="_blank" rel="noopener">${t("openRoute", allWalk)}</a>
+      <button class="btn ghost" id="clearToday" type="button">${t("clearToday")}</button>
     </div>`;
   $("#todayList").innerHTML = html;
 }
@@ -252,8 +277,8 @@ function suggest(kind) {
       pick = [anchor, ...far.slice(1).filter(p => km(anchor, p) <= 12).slice(0, 3)];
     }
   }
-  if (!pick.length) { alert("Nothing left to suggest — you've seen it all!"); return; }
-  if (state.today.length && !confirm("Replace today's plan with a suggestion?")) return;
+  if (!pick.length) { alert(t("noMore")); return; }
+  if (state.today.length && !confirm(t("replaceConfirm"))) return;
   state.today = pick.map(p => p.id);
   save(); renderAll();
 }
@@ -261,7 +286,7 @@ function suggest(kind) {
 // ---------- Map ----------
 let map, layer;
 function renderMap() {
-  if (!window.L) { $("#map").innerHTML = `<div class="empty">Map needs an internet connection.</div>`; return; }
+  if (!window.L) { $("#map").innerHTML = `<div class="empty">${t("mapOffline")}</div>`; return; }
   if (!map) {
     map = L.map("map", { zoomControl: true }).setView(state.base ? [state.base.lat, state.base.lng] : [36.44, 28.22], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -281,14 +306,14 @@ function renderMap() {
     });
     const d = state.base ? km(state.base, p) : NaN;
     L.marker([p.lat, p.lng], { icon }).addTo(layer).bindPopup(
-      `<b>${esc(p.name)}</b>★ ${p.rating.toFixed(1)} · ${p.cost ? "€".repeat(p.cost) : "Free"}${isNaN(d) ? "" : ` · ${fmtKm(d)}<br>${travel(d).label}`}`
+      `<b>${esc(loc(p, "name"))}</b>★ ${dec(p.rating.toFixed(1))} · ${p.cost ? "€".repeat(p.cost) : t("free")}${isNaN(d) ? "" : ` · ${fmtKm(d)}<br>${travel(d).label}`}`
     );
   });
   if (state.base) {
     L.marker([state.base.lat, state.base.lng], {
       icon: L.divIcon({ className: "", iconSize: [30, 30], html: `<div class="mk" style="width:30px;height:30px;background:#111">🏨</div>` }),
       zIndexOffset: 1000,
-    }).addTo(layer).bindPopup(`<b>${esc(state.base.name)}</b>Your stay`);
+    }).addTo(layer).bindPopup(`<b>${esc(state.base.name)}</b>${t("yourStay")}`);
     L.circle([state.base.lat, state.base.lng], { radius: EASY_WALK_KM * 1000, color: "#1b8a4b", weight: 1, fillOpacity: .05 }).addTo(layer);
   }
   setTimeout(() => map.invalidateSize(), 50);
@@ -319,7 +344,8 @@ function parseCoords(s) {
 
 // ---------- Events ----------
 function renderAll() {
-  $("#baseName").textContent = state.base ? state.base.name : "Set your stay";
+  applyStaticText();
+  $("#baseName").textContent = state.base ? state.base.name : t("setStay");
   renderExplore();
   renderToday();
   renderMine();
@@ -373,7 +399,7 @@ $("#mineSeg").addEventListener("click", e => {
   renderMine();
 });
 $("#resetBtn").addEventListener("click", () => {
-  if (confirm("Clear all Done and Ignored marks?")) { state.status = {}; save(); renderAll(); }
+  if (confirm(t("resetConfirm"))) { state.status = {}; save(); renderAll(); }
 });
 $("#todaySummary").addEventListener("click", e => {
   if (e.target.id === "clearToday") { state.today = []; save(); renderAll(); }
@@ -382,30 +408,28 @@ $("#suggestWalk").addEventListener("click", () => suggest("walk"));
 $("#suggestFar").addEventListener("click", () => suggest("far"));
 
 $("#baseBtn").addEventListener("click", openBase);
-$("#presets").innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${p.name}</button>`).join("");
+$("#langSel").addEventListener("change", e => { state.lang = e.target.value; save(); renderAll(); if (map) renderMap(); });
 $("#presets").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const p = PRESETS[+b.dataset.i];
-  setBase(p.lat, p.lng, p.name);
+  setBase(p.lat, p.lng, T().presets[p.name] || p.name);
 });
 $("#gpsBtn").addEventListener("click", () => {
   const msg = $("#gpsMsg");
-  if (!navigator.geolocation) { msg.textContent = "Location isn't available in this browser."; return; }
-  msg.textContent = "Finding you…";
+  if (!navigator.geolocation) { msg.textContent = t("noGeo"); return; }
+  msg.textContent = t("finding");
   navigator.geolocation.getCurrentPosition(
-    pos => setBase(pos.coords.latitude, pos.coords.longitude, "My stay"),
+    pos => setBase(pos.coords.latitude, pos.coords.longitude, t("myStay")),
     err => {
-      msg.textContent = err.code === 1
-        ? "Location permission denied. On iPhone: Settings → Privacy → Location Services → Safari Websites → While Using. Or pick an area below."
-        : "Couldn't get your location. Try again outdoors, or pick an area below.";
+      msg.textContent = t(err.code === 1 ? "geoDenied" : "geoFail");
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
   );
 });
 $("#coordBtn").addEventListener("click", () => {
   const c = parseCoords($("#coordInput").value);
-  if (!c) { $("#coordMsg").textContent = "Couldn't read coordinates — try the format 36.4445, 28.2265"; return; }
-  setBase(c.lat, c.lng, "My stay");
+  if (!c) { $("#coordMsg").textContent = t("coordErr"); return; }
+  setBase(c.lat, c.lng, t("myStay"));
 });
 
 // ---------- Boot ----------

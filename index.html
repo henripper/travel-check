@@ -19,8 +19,9 @@
 <body>
   <header class="topbar">
     <div class="title">
-      <h1>Rhodes Day Planner</h1>
+      <h1 data-i18n="title">Rhodes Day Planner</h1>
       <button id="baseBtn" class="base-chip" type="button">📍 <span id="baseName">Set your stay</span></button>
+      <select id="langSel" class="lang" aria-label="Language"></select>
     </div>
   </header>
 
@@ -29,26 +30,26 @@
     <section id="view-explore" class="view active">
       <div class="controls">
         <div class="seg" id="rangeSeg" role="group" aria-label="Range">
-          <button data-range="2">🚶 ≤2 km</button>
+          <button data-range="2" data-i18n="range2">🚶 ≤2 km</button>
           <button data-range="5">≤5 km</button>
           <button data-range="15">≤15 km</button>
-          <button data-range="999">Island</button>
+          <button data-range="999" data-i18n="island">Island</button>
         </div>
         <label class="toggle">
           <input type="checkbox" id="mustSee">
-          <span>Also show must-sees beyond range (★4.6+)</span>
+          <span data-i18n="mustSee">Also show must-sees beyond range (★4.6+)</span>
         </label>
         <div class="chips" id="catChips"></div>
         <div class="row">
           <select id="sortSel" aria-label="Sort">
-            <option value="dist">Sort: nearest</option>
-            <option value="rating">Sort: top rated</option>
-            <option value="value">Sort: best nearby (rating ÷ distance)</option>
+            <option value="dist" data-i18n="sortDist">Sort: nearest</option>
+            <option value="rating" data-i18n="sortRating">Sort: top rated</option>
+            <option value="value" data-i18n="sortValue">Sort: best nearby (rating ÷ distance)</option>
           </select>
           <select id="costSel" aria-label="Cost">
-            <option value="any">Any cost</option>
-            <option value="free">Free only</option>
-            <option value="cheap">Free or under €8</option>
+            <option value="any" data-i18n="costAny">Any cost</option>
+            <option value="free" data-i18n="costFree">Free only</option>
+            <option value="cheap" data-i18n="costCheap">Free or under €8</option>
           </select>
         </div>
       </div>
@@ -64,11 +65,11 @@
     <!-- Today -->
     <section id="view-today" class="view">
       <div class="today-head">
-        <h2>Today's plan</h2>
-        <p class="muted">Ordered as a loop from your stay, nearest stop first.</p>
+        <h2 data-i18n="todayTitle">Today's plan</h2>
+        <p class="muted" data-i18n="todaySub">Ordered as a loop from your stay, nearest stop first.</p>
         <div class="row">
-          <button id="suggestWalk" class="btn primary" type="button">✨ Suggest a walking day</button>
-          <button id="suggestFar" class="btn" type="button">🚗 Suggest a day trip</button>
+          <button id="suggestWalk" class="btn primary" type="button" data-i18n="suggestWalk">✨ Suggest a walking day</button>
+          <button id="suggestFar" class="btn" type="button" data-i18n="suggestFar">🚗 Suggest a day trip</button>
         </div>
       </div>
       <div id="todaySummary"></div>
@@ -79,49 +80,51 @@
     <section id="view-mine" class="view">
       <div class="controls">
         <div class="seg" id="mineSeg" role="group" aria-label="Status">
-          <button data-status="done" class="on">✓ Done</button>
-          <button data-status="ignored">✕ Ignored</button>
+          <button data-status="done" class="on" data-i18n="done">✓ Done</button>
+          <button data-status="ignored" data-i18n="ignored">✕ Ignored</button>
         </div>
       </div>
       <p class="count" id="mineCount"></p>
       <div id="mineList" class="list"></div>
       <div class="danger-zone">
-        <button id="resetBtn" class="btn ghost" type="button">Reset all marks</button>
+        <button id="resetBtn" class="btn ghost" type="button" data-i18n="reset">Reset all marks</button>
       </div>
     </section>
   </main>
 
   <nav class="tabbar" id="tabbar">
-    <button data-view="explore" class="on"><span>🧭</span>Explore</button>
-    <button data-view="map"><span>🗺️</span>Map</button>
-    <button data-view="today"><span>📅</span>Today<b id="todayBadge" class="badge" hidden></b></button>
-    <button data-view="mine"><span>✅</span>My list</button>
+    <button data-view="explore" class="on"><span>🧭</span><i data-i18n="tabExplore">Explore</i></button>
+    <button data-view="map"><span>🗺️</span><i data-i18n="tabMap">Map</i></button>
+    <button data-view="today"><span>📅</span><i data-i18n="tabToday">Today</i><b id="todayBadge" class="badge" hidden></b></button>
+    <button data-view="mine"><span>✅</span><i data-i18n="tabMine">My list</i></button>
   </nav>
 
   <!-- Where are you staying? -->
   <dialog id="baseDialog">
     <form method="dialog" class="dlg">
-      <h2>Where are you staying?</h2>
-      <p class="muted">Distances are measured from here. Saved on this phone only.</p>
-      <button id="gpsBtn" class="btn primary wide" type="button">📍 Use my current location</button>
+      <h2 data-i18n="dlgTitle">Where are you staying?</h2>
+      <p class="muted" data-i18n="dlgSub">Distances are measured from here. Saved on this phone only.</p>
+      <button id="gpsBtn" class="btn primary wide" type="button" data-i18n="gps">📍 Use my current location</button>
       <p id="gpsMsg" class="muted small"></p>
-      <div class="or">or pick an area</div>
+      <div class="or" data-i18n="orPick">or pick an area</div>
       <div class="presets" id="presets"></div>
       <details>
-        <summary>Enter coordinates or a Google Maps link</summary>
+        <summary data-i18n="coordsSummary">Enter coordinates or a Google Maps link</summary>
         <input id="coordInput" type="text" inputmode="url" placeholder="36.4445, 28.2265 or maps link">
-        <button id="coordBtn" class="btn wide" type="button">Use these</button>
+        <button id="coordBtn" class="btn wide" type="button" data-i18n="useThese">Use these</button>
         <p id="coordMsg" class="muted small"></p>
       </details>
-      <label class="field">Name it (optional)
-        <input id="baseLabel" type="text" placeholder="e.g. My hotel">
+      <label class="field"><span data-i18n="nameIt">Name it (optional)</span>
+        <input id="baseLabel" type="text" placeholder="e.g. My hotel" data-i18n-ph="namePh">
       </label>
-      <button id="closeDlg" class="btn ghost wide" value="cancel">Close</button>
+      <button id="closeDlg" class="btn ghost wide" value="cancel" data-i18n="close">Close</button>
     </form>
   </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="pois.js"></script>
+  <script src="pois-et.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
