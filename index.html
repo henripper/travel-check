@@ -14,15 +14,18 @@
   <link rel="icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <header class="topbar">
     <div class="title">
       <h1 data-i18n="title">Rhodes Day Planner</h1>
-      <button id="baseBtn" class="base-chip" type="button">📍 <span id="baseName">Set your stay</span></button>
-      <select id="langSel" class="lang" aria-label="Language"></select>
+      <div class="flags" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-label="English">🇬🇧</button>
+        <button type="button" data-lang="et" aria-label="Eesti">🇪🇪</button>
+      </div>
     </div>
+    <button id="baseBtn" class="base-chip" type="button">📍 <span id="baseName">Set your stay</span> <span class="edit">✎</span></button>
   </header>
 
   <main>
@@ -99,6 +102,15 @@
     <button data-view="mine"><span>✅</span><i data-i18n="tabMine">My list</i></button>
   </nav>
 
+  <!-- First launch: pick a language -->
+  <dialog id="langDialog">
+    <div class="dlg lang-pick">
+      <h2>Vali keel<br>Choose language</h2>
+      <button type="button" class="btn wide big" data-lang="et">🇪🇪 Eesti</button>
+      <button type="button" class="btn wide big" data-lang="en">🇬🇧 English</button>
+    </div>
+  </dialog>
+
   <!-- Where are you staying? -->
   <dialog id="baseDialog">
     <form method="dialog" class="dlg">
@@ -122,9 +134,9 @@
   </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="pois.js"></script>
-  <script src="pois-et.js"></script>
-  <script src="i18n.js"></script>
-  <script src="app.js"></script>
+  <script src="pois.js?v=3"></script>
+  <script src="pois-et.js?v=3"></script>
+  <script src="i18n.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 // Offline cache: app shell is cached, network is preferred so updates show up.
-const CACHE = "rhodes-day-v2";
+const CACHE = "rhodes-day-v3";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "pois.js", "pois-et.js", "i18n.js", "manifest.webmanifest", "icon-192.png",
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"];
 
@@ -19,6 +19,6 @@ self.addEventListener("fetch", e => {
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }
       return res;
-    }).catch(() => caches.match(e.request))
+    }).catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
 });

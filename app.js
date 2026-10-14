@@ -24,7 +24,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { lang: /^et\b/i.test(navigator.language || "") ? "et" : "en", base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: null, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -36,6 +36,7 @@ function save() {
 
 // ---------- Language ----------
 const T = () => STRINGS[state.lang] || STRINGS.en;
+const phoneIsEstonian = /^et\b/i.test(navigator.language || "");
 function t(key, ...args) {
   const v = T()[key] ?? STRINGS.en[key];
   return typeof v === "function" ? v(...args) : v;
@@ -49,13 +50,22 @@ const catLabel = c => T().cats[c] || STRINGS.en.cats[c];
 const eraLabel = e => T().eras[e] || STRINGS.en.eras[e];
 const dec = s => state.lang === "et" ? s.replace(/(\d)\.(\d)/g, "$1,$2") : s;
 
+// Built-in names (GPS default, preset areas) follow the language; typed names stay as typed.
+function baseLabel(name) {
+  for (const L of Object.values(STRINGS)) {
+    if (name === L.myStay) return t("myStay");
+    const k = Object.keys(L.presets).find(k => L.presets[k] === name);
+    if (k) return T().presets[k] || k;
+  }
+  return name;
+}
+
 function applyStaticText() {
   document.documentElement.lang = state.lang;
   document.title = t("title");
   document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
-  $("#langSel").innerHTML = Object.entries(LANGS)
-    .map(([k, v]) => `<option value="${k}" ${k === state.lang ? "selected" : ""}>${k === "et" ? "🇪🇪" : "🇬🇧"} ${v}</option>`).join("");
+  document.querySelectorAll(".flags [data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === (state.lang || "en")));
   $("#presets").innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${esc(T().presets[p.name] || p.name)}</button>`).join("");
 }
 
@@ -313,7 +323,7 @@ function renderMap() {
     L.marker([state.base.lat, state.base.lng], {
       icon: L.divIcon({ className: "", iconSize: [30, 30], html: `<div class="mk" style="width:30px;height:30px;background:#111">🏨</div>` }),
       zIndexOffset: 1000,
-    }).addTo(layer).bindPopup(`<b>${esc(state.base.name)}</b>${t("yourStay")}`);
+    }).addTo(layer).bindPopup(`<b>${esc(baseLabel(state.base.name))}</b>${t("yourStay")}`);
     L.circle([state.base.lat, state.base.lng], { radius: EASY_WALK_KM * 1000, color: "#1b8a4b", weight: 1, fillOpacity: .05 }).addTo(layer);
   }
   setTimeout(() => map.invalidateSize(), 50);
@@ -331,7 +341,7 @@ function setBase(lat, lng, name) {
 function openBase() {
   $("#gpsMsg").textContent = "";
   $("#coordMsg").textContent = "";
-  $("#baseLabel").value = state.base?.name || "";
+  $("#baseLabel").value = state.base ? baseLabel(state.base.name) : "";
   $("#baseDialog").showModal();
 }
 function parseCoords(s) {
@@ -345,7 +355,7 @@ function parseCoords(s) {
 // ---------- Events ----------
 function renderAll() {
   applyStaticText();
-  $("#baseName").textContent = state.base ? state.base.name : t("setStay");
+  $("#baseName").textContent = state.base ? baseLabel(state.base.name) : t("setStay");
   renderExplore();
   renderToday();
   renderMine();
@@ -408,7 +418,17 @@ $("#suggestWalk").addEventListener("click", () => suggest("walk"));
 $("#suggestFar").addEventListener("click", () => suggest("far"));
 
 $("#baseBtn").addEventListener("click", openBase);
-$("#langSel").addEventListener("change", e => { state.lang = e.target.value; save(); renderAll(); if (map) renderMap(); });
+function setLang(lang) {
+  const first = !state.lang;
+  state.lang = lang; save(); renderAll();
+  if (map) renderMap();
+  const dlg = $("#langDialog");
+  if (dlg.open) dlg.close();
+  if (first && !state.base) openBase();
+}
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
+// The language screen must be answered, not dismissed.
+$("#langDialog").addEventListener("cancel", e => e.preventDefault());
 $("#presets").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const p = PRESETS[+b.dataset.i];
@@ -434,7 +454,12 @@ $("#coordBtn").addEventListener("click", () => {
 
 // ---------- Boot ----------
 renderAll();
-if (!state.base) openBase();
+if (!state.lang) {
+  // Put the phone's own language on top.
+  const pick = $(".lang-pick");
+  if (!phoneIsEstonian) pick.appendChild(pick.querySelector('[data-lang="et"]'));
+  $("#langDialog").showModal();
+} else if (!state.base) openBase();
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
