@@ -241,3 +241,7 @@ dialog.sheet {
 .toprow .seg.dest button { padding: 6px 8px; font-size: .8rem; white-space: nowrap; }
 .topbar .toprow .base-chip { margin-top: 0; flex: 1; min-width: 0; }
 .note { background: var(--warn-soft); color: var(--text); border-radius: 12px; padding: 10px 12px; font-size: .88rem; margin-bottom: 10px; }
+
+.loc { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.loc details[open] { display: grid; gap: 8px; }
+.loc p { margin: 0; }

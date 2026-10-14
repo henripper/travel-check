@@ -37,7 +37,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { lang: null, loop: true, custom: [], dest: "rhodes", bases: {}, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: null, loop: true, custom: [], fixes: {}, dest: "rhodes", bases: {}, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -91,7 +91,9 @@ function applyStaticText() {
 }
 
 // Built-in places plus the ones the user added.
-const allPois = () => [...POIS, ...state.custom].filter(p => (p.dest || "rhodes") === state.dest);
+// Pins the user corrected on their phone override the built-in coordinates.
+const withFix = p => state.fixes[p.id] ? { ...p, ...state.fixes[p.id], fixed: true } : p;
+const allPois = () => [...POIS, ...state.custom].filter(p => (p.dest || "rhodes") === state.dest).map(withFix);
 const dest = () => DESTS[state.dest] || DESTS.rhodes;
 const presets = () => dest().presets || PRESETS;
 
@@ -486,6 +488,55 @@ function openPlace(id) {
   loadWiki(id);
 }
 
+// "Is this pin right?" — show it on Google Maps and let the user correct it.
+function locHtml(p) {
+  const ll = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+  return `
+    <section class="loc">
+      <div class="small muted">📍 ${ll}${p.fixed ? ` · <b>${t("fixedByYou")}</b>` : ""}</div>
+      <a class="btn" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ ${t("checkPin")}</a>
+      <details>
+        <summary>${t("fixLoc")}</summary>
+        <p class="small muted">${t("fixHelp")}</p>
+        <input id="fixInput" type="text" inputmode="url" placeholder="36.44423, 28.22386">
+        <div class="row">
+          <button type="button" class="btn primary" data-fix="save">${t("fixSave")}</button>
+          <button type="button" class="btn" data-fix="here">📍 ${t("fixHere")}</button>
+        </div>
+        ${p.fixed ? `<button type="button" class="btn ghost" data-fix="reset">${t("fixReset")}</button>` : ""}
+        <p id="fixMsg" class="small"></p>
+      </details>
+    </section>`;
+}
+
+function saveFix(id, lat, lng) {
+  const orig = [...POIS, ...state.custom].find(p => p.id === id);
+  // Guard against typos/swapped numbers: a correction should be near the original spot.
+  if (km(orig, { lat, lng }) > 25) { $("#fixMsg").textContent = t("fixFar"); return; }
+  if (orig.custom) { orig.lat = lat; orig.lng = lng; } else state.fixes[id] = { lat, lng };
+  delete wikiCache[`${state.lang}:${id}`];
+  save(); renderAll(); renderPlace(id); loadWiki(id);
+}
+
+function onFix(action) {
+  const id = openId, msg = $("#fixMsg");
+  if (action === "reset") { delete state.fixes[id]; save(); renderAll(); renderPlace(id); return; }
+  if (action === "here") {
+    if (!navigator.geolocation) { msg.textContent = t("noGeo"); return; }
+    msg.textContent = t("finding");
+    navigator.geolocation.getCurrentPosition(
+      pos => saveFix(id, pos.coords.latitude, pos.coords.longitude),
+      err => { msg.textContent = t(err.code === 1 ? "geoDenied" : "geoFail"); },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    return;
+  }
+  const v = $("#fixInput").value.trim();
+  if (/goo\.gl|maps\.app/i.test(v)) { msg.textContent = t("fixShort"); return; }
+  const c = parseCoords(v);
+  if (!c) { msg.textContent = t("coordErr"); return; }
+  saveFix(id, c.lat, c.lng);
+}
+
 function renderPlace(id) {
   const p = findPoi(id);
   if (!p) { $("#placeDialog").close(); return; }
@@ -501,6 +552,7 @@ function renderPlace(id) {
     <div class="sheet-wrap">
       ${w && w.img ? `<img class="photo" src="${esc(w.img)}" alt="">` : ""}
       ${cardHtml}
+      ${locHtml(p)}
       <section class="wiki">${wikiHtml(p, w)}</section>
       ${p.custom ? `<button type="button" class="btn ghost" data-remove="${p.id}">${t("removePlace")}</button>` : ""}
     </div>`;
@@ -705,6 +757,8 @@ document.addEventListener("click", e => {
   if (btn) { act(btn.closest("[data-id]").dataset.id, btn.dataset.act); return; }
   const add = e.target.closest("[data-add]");
   if (add) { addFromMap(+add.dataset.add); return; }
+  const fx = e.target.closest("[data-fix]");
+  if (fx) { onFix(fx.dataset.fix); return; }
   const rm = e.target.closest("[data-remove]");
   if (rm) { removeCustom(rm.dataset.remove); return; }
   if (e.target.closest("#mapSearchBtn")) { mapSearch(query.trim()); return; }

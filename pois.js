@@ -61,19 +61,19 @@ const POIS = [
     lat: 36.4453, lng: 28.2272, rating: 4.1, cost: 1, price: "~€3", mins: 30,
     desc: "Traditional Rhodian and Dodecanese embroidery, Lindian plates, carved furniture and costumes in the Knights' arsenal.",
     tip: "Quick stop next to the Archaeological Museum." },
-  // approx: Symi Sq. inside Liberty Gate
+  // Mapcarta, Tripomatic, Wikimedia Commons
   { id: "aphrodite", name: "Temple of Aphrodite", cat: "ruins", era: "ancient",
-    lat: 36.4468, lng: 28.2274, rating: 3.9, cost: 0, price: "Free (viewed from street)", mins: 10,
+    lat: 36.4458, lng: 28.2274, rating: 3.9, cost: 0, price: "Free (viewed from street)", mins: 10,
     desc: "Remains of a 3rd-century BC temple on Symi Square, just inside the Liberty Gate.",
     tip: "" },
-  // approx: d'Amboise Gate below the Palace
+  // GPSmyCity, Mapcarta (d'Amboise Gate)
   { id: "moat", name: "Old Town Moat Walk", cat: "castle", era: "medieval",
-    lat: 36.4462, lng: 28.2225, rating: 4.6, cost: 0, price: "Free", mins: 45,
+    lat: 36.446, lng: 28.2228, rating: 4.6, cost: 0, price: "Free", mins: 45,
     desc: "Walk the dry moat between the massive walls — 4 km of fortifications, stone cannonballs everywhere. Enter near the d'Amboise Gate.",
     tip: "Shady in the morning, a great quiet escape from the busy lanes." },
-  // approx: east wall facing the harbour
+  // Wikimedia Commons, Wikimapia
   { id: "marinegate", name: "Marine Gate", cat: "castle", era: "medieval",
-    lat: 36.4452, lng: 28.2296, rating: 4.4, cost: 0, price: "Free", mins: 10,
+    lat: 36.444, lng: 28.2282, rating: 4.4, cost: 0, price: "Free", mins: 10,
     desc: "The grand twin-towered sea gate of 1478, facing the commercial harbour.",
     tip: "" },
   // Wikipedia
@@ -81,14 +81,14 @@ const POIS = [
     lat: 36.4444, lng: 28.2242, rating: 4.2, cost: 0, price: "Free (exterior)", mins: 10,
     desc: "Pink-plastered mosque built after the Ottoman conquest of 1522, rebuilt in 1808. Opposite is the Hafiz Ahmed Aga library.",
     tip: "Interior usually closed; admire from Sokratous Street." },
-  // approx: beside Suleymaniye Mosque
+  // GPSmyCity, MapQuest, allovergreece, Evendo, Outdooractive
   { id: "clocktower", name: "Clock Tower (Roloi)", cat: "vista", era: "ottoman",
-    lat: 36.4446, lng: 28.2245, rating: 4.4, cost: 1, price: "~€5 incl. a drink", mins: 30,
+    lat: 36.44423, lng: 28.22386, rating: 4.4, cost: 1, price: "~€5 incl. a drink", mins: 30,
     desc: "Climb the 1850s clock tower — the highest point of the Old Town with 360° views over domes, minarets and the harbour.",
     tip: "Best in late afternoon light." },
-  // approx: Hippocrates Sq. just inside Marine Gate
+  // Komoot, Minube, allovergreece, Wikimedia (Hippocrates Sq.)
   { id: "sokratous", name: "Sokratous Street & Hippocrates Square", cat: "oldtown", era: "ottoman",
-    lat: 36.4443, lng: 28.2288, rating: 4.3, cost: 0, price: "Free", mins: 45,
+    lat: 36.4437, lng: 28.2283, rating: 4.3, cost: 0, price: "Free", mins: 45,
     desc: "The Old Town's old bazaar street, ending at the Castellania fountain on Hippocrates Square. Shops, cafés, people-watching.",
     tip: "Wander the side lanes south of here — far quieter and more authentic." },
   // Wikipedia (Kahal Shalom)
@@ -96,21 +96,21 @@ const POIS = [
     lat: 36.4422, lng: 28.2304, rating: 4.6, cost: 1, price: "Small donation/fee", mins: 40,
     desc: "Greece's oldest synagogue (1577) and a moving museum on the Rhodian Jewish community deported in 1944. Square of the Jewish Martyrs nearby.",
     tip: "Closed Saturdays." },
-  // approx: near Gate of the Virgin
+  // GPSmyCity, Evendo, Wikimedia Commons
   { id: "burgh", name: "Our Lady of the Burgh (ruins)", cat: "ruins", era: "medieval",
-    lat: 36.4427, lng: 28.231, rating: 4.5, cost: 0, price: "Free", mins: 15,
+    lat: 36.4429, lng: 28.2308, rating: 4.5, cost: 0, price: "Free", mins: 15,
     desc: "Roofless Gothic church with soaring arches — one of the most photogenic spots in the Old Town.",
     tip: "Often hosts evening concerts in summer." },
-  // approx: Agiou Fanouriou street
+  // Tripadvisor, MapQuest, Komoot
   { id: "fanourios", name: "Agios Fanourios Church", cat: "religious", era: "byzantine",
-    lat: 36.4425, lng: 28.2248, rating: 4.3, cost: 0, price: "Free", mins: 10,
+    lat: 36.4414, lng: 28.2254, rating: 4.3, cost: 0, price: "Free", mins: 10,
     desc: "Tiny, partly sunken Byzantine church with fine frescoes, hidden in the quiet south-west lanes.",
     tip: "" },
 
   // ---------- Rhodes New Town & Mandraki ----------
-  // approx: harbour entrance by St Nicholas mole
+  // allovergreece, Waymarking (deer columns)
   { id: "mandraki", name: "Mandraki Harbour & Deer Statues", cat: "vista", era: "italian",
-    lat: 36.4505, lng: 28.2276, rating: 4.5, cost: 0, price: "Free", mins: 30,
+    lat: 36.4512, lng: 28.2265, rating: 4.5, cost: 0, price: "Free", mins: 30,
     desc: "Where legend places the Colossus of Rhodes. Bronze stag and doe on columns guard the entrance; yachts and day-trip boats line the quay.",
     tip: "Boats to Lindos, Symi and the east-coast beaches leave from here." },
   // Wikipedia lighthouse list (St Nicholas Fort)
@@ -123,9 +123,9 @@ const POIS = [
     lat: 36.4509, lng: 28.225, rating: 4.3, cost: 0, price: "Free", mins: 30,
     desc: "1920s–30s Italian colonial buildings: the Venetian-Gothic Governor's Palace, Evangelismos Church, Town Hall, National Theatre and Post Office.",
     tip: "Combine with Mandraki and the New Market." },
-  // approx: south side of Mandraki
+  // Tripadvisor, Outdooractive, allovergreece, Komoot
   { id: "newmarket", name: "New Market (Nea Agora)", cat: "market", era: "italian",
-    lat: 36.4486, lng: 28.2262, rating: 4.0, cost: 0, price: "Free", mins: 30,
+    lat: 36.4476, lng: 28.2253, rating: 4.0, cost: 0, price: "Free", mins: 30,
     desc: "Heptagonal Italian-era market with cafés, souvlaki joints and fresh juice. East-coast buses leave from the stops right beside it.",
     tip: "Good spot for a cheap gyros lunch." },
   // Wikipedia
@@ -138,9 +138,9 @@ const POIS = [
     lat: 36.4535, lng: 28.2225, rating: 3.9, cost: 0, price: "Free (exterior)", mins: 10,
     desc: "Grand 1927 Italian hotel in an eclectic Moorish-Venetian style, now the Casino Rodos. Right by Elli Beach.",
     tip: "" },
-  // approx: G. Charitou Sq., New Town
+  // G. Charitou Sq. per hotel listings (Tripadvisor, ZenHotels)
   { id: "nestorideio", name: "Museum of Modern Greek Art (Nestorideio)", cat: "museum", era: "modern",
-    lat: 36.4555, lng: 28.215, rating: 4.3, cost: 1, price: "~€3–5", mins: 60,
+    lat: 36.4545, lng: 28.2205, rating: 4.3, cost: 1, price: "~€3–5", mins: 60,
     desc: "The main venue of one of Greece's best modern-art collections: Greek painters from the 19th century to today.",
     tip: "Check opening hours — some branches close on Mondays." },
   // allovergreece
@@ -153,21 +153,21 @@ const POIS = [
     lat: 36.4572, lng: 28.2208, rating: 4.1, cost: 2, price: "~€8", mins: 45,
     desc: "Small aquarium of Aegean sea life in a 1930s Italian Art Deco building at the island's northern tip.",
     tip: "Walk on to the very tip (Kum Burnu) where two seas meet." },
-  // approx: tip just past the Aquarium
+  // Komoot
   { id: "kumburnu", name: "Northern Tip (Kum Burnu)", cat: "vista", era: "nature",
-    lat: 36.4578, lng: 28.2207, rating: 4.3, cost: 0, price: "Free", mins: 20,
+    lat: 36.4575, lng: 28.2207, rating: 4.3, cost: 0, price: "Free", mins: 20,
     desc: "The northernmost point of Rhodes — watch the calm east sea meet the windy west sea. Views to Turkey on clear days.",
     tip: "" },
 
   // ---------- South of town ----------
-  // Wikipedia via Sygic
+  // Wikipedia
   { id: "acropolis", name: "Acropolis of Rhodes (Temple of Apollo & Stadium)", cat: "ruins", era: "ancient",
-    lat: 36.4393, lng: 28.2116, rating: 4.5, cost: 0, price: "Free", mins: 60,
+    lat: 36.4402, lng: 28.2109, rating: 4.5, cost: 0, price: "Free", mins: 60,
     desc: "Hellenistic acropolis on Monte Smith: columns of the Temple of Pythian Apollo, a restored stadium and a small odeon.",
     tip: "Uphill walk — or take city bus no. 5. Go late for the sunset from Monte Smith." },
-  // approx: west brow of the acropolis hill
+  // allovergreece
   { id: "montesmith", name: "Monte Smith Sunset Viewpoint", cat: "vista", era: "nature",
-    lat: 36.4395, lng: 28.2098, rating: 4.6, cost: 0, price: "Free", mins: 30,
+    lat: 36.4418, lng: 28.2088, rating: 4.6, cost: 0, price: "Free", mins: 30,
     desc: "The hilltop above the acropolis looks west over the sea to Turkey and Symi. The classic Rhodes Town sunset spot.",
     tip: "Pair with the Acropolis ruins just below." },
   // Sygic
@@ -180,9 +180,9 @@ const POIS = [
     lat: 36.4223, lng: 28.215, rating: 4.0, cost: 0, price: "Free", mins: 20,
     desc: "Monumental Hellenistic tomb with a stepped facade, cut into the rock just beyond Rodini Park.",
     tip: "" },
-  // Wikipedia (village-level)
+  // Mapcarta, Apple Maps
   { id: "koskinou", name: "Koskinou Village", cat: "village", era: "modern",
-    lat: 36.383, lng: 28.217, rating: 4.5, cost: 0, price: "Free", mins: 60,
+    lat: 36.3873, lng: 28.2145, rating: 4.5, cost: 0, price: "Free", mins: 60,
     desc: "Traditional village famous for its brightly painted doorways, pebble-mosaic courtyards and quiet lanes.",
     tip: "Pop into a kafeneio on the square." },
   // Sygic
@@ -197,9 +197,9 @@ const POIS = [
     desc: "Emerald cove surrounded by pine-covered rocks, named after the actor who filmed The Guns of Navarone here. Superb snorkelling.",
     tip: "Small and popular — arrive before 10:00.",
     how: "East-coast bus to Faliraki, then taxi or 30-min walk; or by car." },
-  // approx: Leof. Kallitheas opposite Esperos Palace
+  // Tripadvisor, Greeka, Airial, TurPravda
   { id: "waterpark", name: "Water Park Faliraki", cat: "family", era: "modern",
-    lat: 36.357, lng: 28.204, rating: 4.4, cost: 3, price: "~€30", mins: 240,
+    lat: 36.3644, lng: 28.2123, rating: 4.4, cost: 3, price: "~€30", mins: 240,
     desc: "One of the largest water parks in Europe: slides, wave pool and lazy river.",
     tip: "Usually closes by end of October — check before going.",
     how: "Free shuttle buses run from Rhodes Town in season." },
@@ -247,9 +247,9 @@ const POIS = [
     desc: "1930s Italian model village with a ghostly derelict square, a fascist-era hospital and the 'Fish Pond' with rare Ladoga minnow.",
     tip: "Pair with Fountoukli church 3 km away.",
     how: "Car (~45 min)." },
-  // UNVERIFIED (no published point)
+  // Tripadvisor
   { id: "fountoukli", name: "Agios Nikolaos Fountoukli", cat: "religious", era: "byzantine",
-    lat: 36.293, lng: 28.005, rating: 4.4, cost: 0, price: "Free / small donation", mins: 20,
+    lat: 36.2742, lng: 27.9975, rating: 4.4, cost: 0, price: "Free / small donation", mins: 20,
     desc: "Tiny four-apse 15th-century chapel in the hills with remarkable frescoes and a spring-fed picnic spot.",
     tip: "",
     how: "Car (~45 min)." },
