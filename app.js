@@ -8,6 +8,19 @@ const EASY_WALK_KM = 2;        // straight-line km
 const MAX_WALK_KM = 4.5;
 const MUST_SEE = 4.6;
 
+// Destinations: where the map opens, the word added to web searches, the OpenStreetMap
+// search box (lon/lat), and quick picks for "where are you staying".
+const DESTS = {
+  rhodes: { center: { lat: 36.44, lng: 28.22 }, word: "Rhodes", bbox: "27.65,36.50,28.30,35.85" },
+  symi: { center: { lat: 36.6156, lng: 27.8361 }, word: "Symi", driveKmh: 25,  // steep, winding roads bbox: "27.74,36.67,27.93,36.49",
+    presets: [
+      { name: "Gialos harbour", lat: 36.6156, lng: 27.8361 },
+      { name: "Chorio", lat: 36.6112, lng: 27.8333 },
+      { name: "Pedi", lat: 36.6125, lng: 27.8540 },
+      { name: "Nimborios", lat: 36.6228, lng: 27.8215 },
+      { name: "Panormitis", lat: 36.5482, lng: 27.8463 },
+    ] },
+};
 const PRESETS = [
   { name: "Old Town", lat: 36.4445, lng: 28.2265 },
   { name: "New Town / Mandraki", lat: 36.4530, lng: 28.2215 },
@@ -24,7 +37,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { lang: null, loop: true, custom: [], base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: null, loop: true, custom: [], dest: "rhodes", bases: {}, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -66,11 +79,37 @@ function applyStaticText() {
   document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
   document.querySelectorAll(".flags [data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === (state.lang || "en")));
-  $("#presets").innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${esc(T().presets[p.name] || p.name)}</button>`).join("");
+  const titles = T().titles || STRINGS.en.titles;
+  $("h1").textContent = document.title = titles[state.dest];
+  document.querySelectorAll("#destSeg [data-dest]").forEach(b => {
+    b.textContent = (T().dests || STRINGS.en.dests)[b.dataset.dest];
+    b.classList.toggle("on", b.dataset.dest === state.dest);
+  });
+  $("#destNote").hidden = state.dest !== "symi" || !!query.trim();
+  $("#destNote").textContent = t("symiTips");
+  $("#presets").innerHTML = presets().map((p, i) => `<button type="button" data-i="${i}">${esc(T().presets[p.name] || p.name)}</button>`).join("");
 }
 
 // Built-in places plus the ones the user added.
-const allPois = () => [...POIS, ...state.custom];
+const allPois = () => [...POIS, ...state.custom].filter(p => (p.dest || "rhodes") === state.dest);
+const dest = () => DESTS[state.dest] || DESTS.rhodes;
+const presets = () => dest().presets || PRESETS;
+
+function switchDest(d) {
+  if (d === state.dest || !DESTS[d]) return;
+  state.bases[state.dest] = state.base;
+  state.dest = d;
+  // Symi is usually a day trip, so start from the ferry harbour unless you set something else.
+  const first = DESTS[d].presets?.[0];
+  state.base = state.bases[d] || (first ? { lat: first.lat, lng: first.lng, name: first.name } : null);
+  state.cats = [];
+  query = ""; $("#searchInput").value = ""; mapHits = null; mapState = "";
+  save();
+  if (map) { const c = state.base || DESTS[d].center; map.setView([c.lat, c.lng], 13); }
+  renderAll();
+  window.scrollTo(0, 0);
+  if (!state.base) openBase();
+}
 const findPoi = id => allPois().find(p => p.id === id);
 
 // ---------- Geo helpers ----------
@@ -88,12 +127,12 @@ function fmtMin(m) {
   return r ? `${h} h ${r}` : `${h} h`;
 }
 function walkMin(d) { return d * ROUTE_FACTOR / WALK_KMH * 60; }
-function driveMin(d) { return d * ROUTE_FACTOR / DRIVE_KMH * 60 + 5; }
+function driveMin(d) { return d * ROUTE_FACTOR / (dest().driveKmh || DRIVE_KMH) * 60 + 5; }
 
 function travel(d) {
   if (d <= EASY_WALK_KM) return { kind: "walk", label: t("walk", fmtMin(walkMin(d))), cls: "walk" };
   if (d <= MAX_WALK_KM) return { kind: "longwalk", label: t("longWalk", fmtMin(walkMin(d)), fmtMin(driveMin(d))), cls: "longwalk" };
-  return { kind: "ride", label: t("ride", fmtMin(driveMin(d))), cls: "ride" };
+  return { kind: "ride", label: t(state.dest === "symi" ? "rideSymi" : "ride", fmtMin(driveMin(d))), cls: "ride" };
 }
 
 function mapsLink(dest, mode, origin) {
@@ -244,8 +283,8 @@ function renderToday() {
   $("#loopChk").checked = state.loop;
   $("#todaySub").textContent = t(state.loop ? "todaySubLoop" : "todaySub");
   const badge = $("#todayBadge");
-  badge.hidden = !state.today.length;
-  badge.textContent = state.today.length;
+  badge.hidden = !stops.length;
+  badge.textContent = stops.length;
 
   if (!stops.length) {
     $("#todaySummary").innerHTML = "";
@@ -301,7 +340,7 @@ function suggest(kind) {
   let pick;
   if (kind === "walk") {
     // Best-rated places within walking distance, up to ~6 hours of sightseeing.
-    const cand = pool.filter(p => p.d <= MAX_WALK_KM && p.cat !== "beach").sort((a, b) => b.rating - a.rating || a.d - b.d);
+    const cand = pool.filter(p => p.d <= MAX_WALK_KM && p.cat !== "beach" && p.cat !== "experience").sort((a, b) => b.rating - a.rating || a.d - b.d);
     pick = []; let mins = 0;
     for (const p of cand) { if (mins + p.mins > 360) continue; pick.push(p); mins += p.mins; if (pick.length >= 7) break; }
   } else {
@@ -314,8 +353,8 @@ function suggest(kind) {
     }
   }
   if (!pick.length) { alert(t("noMore")); return; }
-  if (state.today.length && !confirm(t("replaceConfirm"))) return;
-  state.today = pick.map(p => p.id);
+  if (state.today.some(findPoi) && !confirm(t("replaceConfirm"))) return;
+  state.today = [...state.today.filter(id => !findPoi(id)), ...pick.map(p => p.id)];
   save(); renderAll();
 }
 
@@ -378,7 +417,7 @@ function catFromOsm(c, type) {
 async function mapSearch(q) {
   mapState = "loading"; mapHits = null; renderSearch();
   const u = new URLSearchParams({
-    format: "jsonv2", q, limit: "8", bounded: "1", viewbox: "27.65,36.50,28.30,35.85", "accept-language": state.lang || "en",
+    format: "jsonv2", q, limit: "8", bounded: "1", viewbox: dest().bbox, "accept-language": state.lang || "en",
   });
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?${u}`);
@@ -396,7 +435,7 @@ async function mapSearch(q) {
 }
 
 function addCustom({ name, lat, lng, cat, address }) {
-  const p = { id: `c${Date.now()}`, custom: true, name, lat, lng, cat: CATEGORIES[cat] ? cat : "other",
+  const p = { id: `c${Date.now()}`, custom: true, dest: state.dest, name, lat, lng, cat: CATEGORIES[cat] ? cat : "other",
     era: "modern", rating: 0, cost: 0, mins: 60, desc: address || "" };
   state.custom.push(p);
   save();
@@ -468,7 +507,7 @@ function renderPlace(id) {
 }
 
 function wikiHtml(p, w) {
-  const web = `https://www.google.com/search?q=${encodeURIComponent(`"${p.name}" Rhodes`)}&hl=${state.lang}`;
+  const web = `https://www.google.com/search?q=${encodeURIComponent(`"${p.name}" ${dest().word}`)}&hl=${state.lang}`;
   const webLink = `<a class="btn" href="${web}" target="_blank" rel="noopener">🔎 ${t("webSearch")}</a>`;
   if (!w) return `<p class="muted">📖 ${t("wikiLoading")}</p>`;
   if (w.error) return `<p class="muted">${t("wikiOffline")}</p>${webLink}`;
@@ -490,7 +529,7 @@ const GENERIC = new Set(("the of and in on at de la tou tis ton our lady saint a
   "springs spring valley lake walk walls collection art modern italian ottoman").split(" "));
 const words = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
   .split(/[^a-z0-9]+/).filter(w => w.length > 2 && !GENERIC.has(w));
-const NEAR_KM = 3, ABOUT_RHODES = /rhod|lindos|dodecanese/i;
+const NEAR_KM = 3, ABOUT_RHODES = /rhod|lindos|dodecanese|symi/i;
 
 // Words an article title must contain to count as "about this place".
 function placeWords(p) {
@@ -528,6 +567,7 @@ async function pageByTitle(lang, title) {
 
 async function findEnglish(p) {
   const ref = WIKI[p.id] || "";
+  if (ref === "-") return null;  // an activity or dish, not a place with an article
   const ws = placeWords(p);
 
   // 1. A title chosen by hand — still double-checked.
@@ -544,7 +584,7 @@ async function findEnglish(p) {
   if (hit) return pageByTitle("en", hit.title);
 
   // 3. Text search, but only results located near the place with a matching title.
-  const q = `${p.name} Rhodes`;
+  const q = `${p.name} ${dest().word}`;
   const found = Object.values((await api("en", { generator: "search", gsrsearch: q, gsrlimit: "5", ...PAGE_PROPS })).pages || {})
     .sort((a, b) => a.index - b.index).map(toPage)
     // Search hits must be geotagged next to the place: an untagged article (people, films…)
@@ -583,7 +623,7 @@ let map, layer;
 function renderMap() {
   if (!window.L) { $("#map").innerHTML = `<div class="empty">${t("mapOffline")}</div>`; return; }
   if (!map) {
-    map = L.map("map", { zoomControl: true }).setView(state.base ? [state.base.lat, state.base.lng] : [36.44, 28.22], 13);
+    map = L.map("map", { zoomControl: true }).setView(state.base ? [state.base.lat, state.base.lng] : [dest().center.lat, dest().center.lng], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "© OpenStreetMap",
     }).addTo(map);
@@ -709,13 +749,14 @@ $("#resetBtn").addEventListener("click", () => {
   if (confirm(t("resetConfirm"))) { state.status = {}; save(); renderAll(); }
 });
 $("#todaySummary").addEventListener("click", e => {
-  if (e.target.id === "clearToday") { state.today = []; save(); renderAll(); }
+  if (e.target.id === "clearToday") { state.today = state.today.filter(id => !findPoi(id)); save(); renderAll(); }
 });
 $("#suggestWalk").addEventListener("click", () => suggest("walk"));
 $("#loopChk").addEventListener("change", e => { state.loop = e.target.checked; save(); renderToday(); });
 $("#suggestFar").addEventListener("click", () => suggest("far"));
 
 $("#baseBtn").addEventListener("click", openBase);
+$("#destSeg").addEventListener("click", e => { const b = e.target.closest("[data-dest]"); if (b) switchDest(b.dataset.dest); });
 function setLang(lang) {
   const first = !state.lang;
   state.lang = lang; save(); renderAll();
@@ -730,7 +771,7 @@ document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click"
 $("#langDialog").addEventListener("cancel", e => e.preventDefault());
 $("#presets").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  const p = PRESETS[+b.dataset.i];
+  const p = presets()[+b.dataset.i];
   setBase(p.lat, p.lng, T().presets[p.name] || p.name);
 });
 $("#gpsBtn").addEventListener("click", () => {

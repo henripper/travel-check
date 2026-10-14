@@ -5,6 +5,10 @@ const LANGS = { en: "English", et: "Eesti" };
 const STRINGS = {
   en: {
     title: "Rhodes Day Planner",
+    titles: { rhodes: "Rhodes Day Planner", symi: "Symi Day Planner" },
+    dests: { rhodes: "🏝️ Rhodes", symi: "⛵ Symi" },
+    symiTips: "👟 Lots of stairs everywhere — wear good shoes. In late October, check that taxi boats and tavernas are still running.",
+    rideSymi: d => `🚌 Bus, taxi or boat needed · ~${d} by road`,
     setStay: "Set your stay",
     range2: "🚶 ≤2 km", island: "Island",
     mustSee: "Also show must-sees beyond range (★4.6+)",
@@ -69,11 +73,11 @@ const STRINGS = {
     wikiLoading: "Loading Wikipedia…", wikiMore: "Read the full article on Wikipedia",
     wikiEnOnly: "No Estonian article — showing English.", wikiNone: "Wikipedia has no article about this exact place.",
     wikiOffline: "Couldn't load Wikipedia — check your internet connection.", wikiSearch: "Search Wikipedia", webSearch: "Search the web",
-    presets: { "Old Town": "Old Town", "New Town / Mandraki": "New Town / Mandraki" },
+    presets: { "Old Town": "Old Town", "New Town / Mandraki": "New Town / Mandraki", "Gialos harbour": "Gialos harbour" },
     cats: {
       museum: "Museum", ruins: "Ruins", castle: "Castle & walls", vista: "Vista", religious: "Church & mosque",
       oldtown: "Historic streets", architecture: "Architecture", beach: "Beach", nature: "Nature & parks",
-      village: "Village", market: "Market", family: "Family", food: "Food & wine", other: "Other",
+      village: "Village", market: "Market", family: "Family", food: "Food & wine", experience: "Experience", other: "Other",
     },
     eras: { ancient: "Ancient", byzantine: "Byzantine", medieval: "Knights era", ottoman: "Ottoman",
       italian: "Italian era", modern: "Modern", nature: "Natural" },
@@ -81,6 +85,10 @@ const STRINGS = {
 
   et: {
     title: "Rhodose päevaplaan",
+    titles: { rhodes: "Rhodose päevaplaan", symi: "Symi päevaplaan" },
+    dests: { rhodes: "🏝️ Rhodos", symi: "⛵ Symi" },
+    symiTips: "👟 Treppe on kõikjal — kanna mugavaid jalanõusid. Oktoobri lõpus kontrolli, kas taksopaadid ja kõrtsid veel töötavad.",
+    rideSymi: d => `🚌 Vaja bussi, taksot või paati · teed pidi ~${d}`,
     setStay: "Määra majutus",
     range2: "🚶 ≤2 km", island: "Kogu saar",
     mustSee: "Näita ka kaugemaid tippkohti (★4,6+)",
@@ -145,11 +153,11 @@ const STRINGS = {
     wikiLoading: "Laadin Vikipeediat…", wikiMore: "Loe kogu artiklit Vikipeedias",
     wikiEnOnly: "Eestikeelset artiklit pole — näitan ingliskeelset.", wikiNone: "Vikipeedias selle koha kohta artiklit pole.",
     wikiOffline: "Vikipeediat ei õnnestunud laadida — kontrolli internetiühendust.", wikiSearch: "Otsi Vikipeediast", webSearch: "Otsi veebist",
-    presets: { "Old Town": "Vanalinn", "New Town / Mandraki": "Uuslinn / Mandraki" },
+    presets: { "Old Town": "Vanalinn", "New Town / Mandraki": "Uuslinn / Mandraki", "Gialos harbour": "Gialose sadam" },
     cats: {
       museum: "Muuseum", ruins: "Varemed", castle: "Kindlused ja müürid", vista: "Vaade", religious: "Kirikud ja mošeed",
       oldtown: "Ajaloolised tänavad", architecture: "Arhitektuur", beach: "Rand", nature: "Loodus ja pargid",
-      village: "Küla", market: "Turg", family: "Perele", food: "Toit ja vein", other: "Muu",
+      village: "Küla", market: "Turg", family: "Perele", food: "Toit ja vein", experience: "Elamus", other: "Muu",
     },
     eras: { ancient: "Antiikaeg", byzantine: "Bütsants", medieval: "Rüütlite aeg", ottoman: "Osmanite aeg",
       italian: "Itaalia aeg", modern: "Tänapäev", nature: "Loodus" },

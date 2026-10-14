@@ -18,6 +18,7 @@ const CATEGORIES = {
   market:   { label: "Market",        icon: "🛍️" },
   family:   { label: "Family",        icon: "🐠" },
   food:     { label: "Food & wine",   icon: "🍷" },
+  experience: { label: "Experience",  icon: "🚤" },
   other:    { label: "Other",         icon: "📌" },
 };
 

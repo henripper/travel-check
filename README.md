@@ -1,5 +1,7 @@
 # Rhodes Day Planner
 
+Covers **Rhodes** and **Symi**. Switch islands with the 🏝️ Rhodes / ⛵ Symi toggle in the top bar.
+
 A phone-friendly web app for planning a day on Rhodes, Greece. It works on both iPhone and Android.
 
 - **Your base:** set it with GPS, pick an area such as Old Town or Faliraki, or paste coordinates or a Google Maps link. All distances are measured from there.
@@ -29,7 +31,7 @@ After about a minute, the app is live at `https://<your-username>.github.io/trav
 Estonian text for each place is in `pois-et.js`, and the interface text is in `i18n.js`. If a translation is missing, the app shows the English text instead. The `WIKI` map at the end of `pois.js` sets which Wikipedia article each place opens. An exact title is used only if the article is located on Rhodes or mentions it. An entry starting with `?` lists keywords: the app looks for a Wikipedia article located near the place whose title contains one of them. If nothing matches, no article is shown and the app offers a web search instead.
 
 
-All places are in `pois.js`. Each one has coordinates, a category, an era, a rating from 1 to 5, a cost level (0 means free, up to 3), a price note, the suggested minutes to spend there, a description, a tip, and optionally `how` (getting there).
+Rhodes places are in `pois.js`, and Symi places with their Estonian text are in `symi.js`. Each one has coordinates, a category, an era, a rating from 1 to 5, a cost level (0 means free, up to 3), a price note, the suggested minutes to spend there, a description, a tip, and optionally `how` (getting there).
 
 Prices are approximate for 2025–26. Greek state sites are about half price from November to March, so check on the day.
 

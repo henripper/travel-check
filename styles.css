@@ -235,3 +235,9 @@ dialog.sheet {
 .pill.mine { background: var(--accent-soft); color: var(--accent); }
 
 [hidden] { display: none !important; }
+
+.toprow { display: flex; gap: 8px; margin-top: 8px; align-items: stretch; }
+.toprow .seg.dest { flex: none; padding: 2px; }
+.toprow .seg.dest button { padding: 6px 8px; font-size: .8rem; white-space: nowrap; }
+.topbar .toprow .base-chip { margin-top: 0; flex: 1; min-width: 0; }
+.note { background: var(--warn-soft); color: var(--text); border-radius: 12px; padding: 10px 12px; font-size: .88rem; margin-bottom: 10px; }
