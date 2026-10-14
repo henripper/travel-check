@@ -24,7 +24,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { lang: null, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: null, loop: true, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -205,20 +205,39 @@ function renderMine() {
 function orderedToday() {
   let pts = state.today.map(id => POIS.find(p => p.id === id)).filter(Boolean);
   if (!state.base) return pts.map(p => ({ ...p, d: NaN, leg: NaN }));
-  const out = [];
+  // Start with nearest-neighbour from the base…
+  const route = [];
   let cur = state.base;
   while (pts.length) {
     let bi = 0;
     pts.forEach((p, i) => { if (km(cur, p) < km(cur, pts[bi])) bi = i; });
-    const p = pts.splice(bi, 1)[0];
-    out.push({ ...p, d: km(state.base, p), leg: km(cur, p), prev: cur });
-    cur = p;
+    cur = pts.splice(bi, 1)[0];
+    route.push(cur);
   }
-  return out;
+  // …then untangle crossings with 2-opt. For a round trip the walk home counts too.
+  const length = r => r.reduce((sum, p, i) => sum + km(i ? r[i - 1] : state.base, p), 0)
+    + (state.loop && r.length ? km(r[r.length - 1], state.base) : 0);
+  let best = length(route), improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < route.length - 1; i++) {
+      for (let j = i + 1; j < route.length; j++) {
+        const cand = [...route.slice(0, i), ...route.slice(i, j + 1).reverse(), ...route.slice(j + 1)];
+        const len = length(cand);
+        if (len < best - 1e-9) { route.splice(0, route.length, ...cand); best = len; improved = true; }
+      }
+    }
+  }
+  return route.map((p, i) => {
+    const prev = i ? route[i - 1] : state.base;
+    return { ...p, d: km(state.base, p), leg: km(prev, p), prev };
+  });
 }
 
 function renderToday() {
   const stops = orderedToday();
+  $("#loopChk").checked = state.loop;
+  $("#todaySub").textContent = t(state.loop ? "todaySubLoop" : "todaySub");
   const badge = $("#todayBadge");
   badge.hidden = !state.today.length;
   badge.textContent = state.today.length;
@@ -240,7 +259,7 @@ function renderToday() {
   });
   let travelMin = walkMin(walkKm) + (rideKm ? driveMin(rideKm) : 0);
   const last = stops[stops.length - 1];
-  if (state.base) {
+  if (state.base && state.loop) {
     const back = km(last, state.base);
     html += `<div class="leg">${t("legBack")}: ${fmtKm(back)} · ${travel(back).label}</div>`;
     if (travel(back).kind === "ride") { rideKm += back; travelMin += driveMin(back); }
@@ -250,14 +269,16 @@ function renderToday() {
   const allWalk = rideKm === 0;
   const mode = allWalk ? "walking" : "driving";
   // Google Maps allows up to 9 waypoints in a URL.
-  const way = stops.slice(0, -1).slice(0, 9).map(p => `${p.lat},${p.lng}`).join("|");
-  const params = new URLSearchParams({ api: "1", destination: `${last.lat},${last.lng}`, travelmode: mode });
+  const roundTrip = state.loop && state.base;
+  const way = (roundTrip ? stops : stops.slice(0, -1)).slice(0, 9).map(p => `${p.lat},${p.lng}`).join("|");
+  const end = roundTrip ? state.base : last;
+  const params = new URLSearchParams({ api: "1", destination: `${end.lat},${end.lng}`, travelmode: mode });
   if (state.base) params.set("origin", `${state.base.lat},${state.base.lng}`);
   if (way) params.set("waypoints", way);
 
   $("#todaySummary").innerHTML = `
     <div class="summary">
-      <div><b>${t("stops", stops.length)}</b> · ${t("aboutTotal", fmtMin(visit + travelMin))}</div>
+      <div><b>${t("stops", stops.length)}</b> · ${t("aboutTotal", fmtMin(visit + travelMin))}${roundTrip ? ` · ${t("loopDone")}` : ""}</div>
       <div class="muted small">
         🚶 ${fmtKm(walkKm * ROUTE_FACTOR)} ${t("onFoot")}${rideKm ? ` · 🚌 ${fmtKm(rideKm * ROUTE_FACTOR)} ${t("byTransport")}` : ""}
         · ${fmtMin(visit)} ${t("sightseeing")}
@@ -508,6 +529,7 @@ $("#todaySummary").addEventListener("click", e => {
   if (e.target.id === "clearToday") { state.today = []; save(); renderAll(); }
 });
 $("#suggestWalk").addEventListener("click", () => suggest("walk"));
+$("#loopChk").addEventListener("change", e => { state.loop = e.target.checked; save(); renderToday(); });
 $("#suggestFar").addEventListener("click", () => suggest("far"));
 
 $("#baseBtn").addEventListener("click", openBase);

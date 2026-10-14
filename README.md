@@ -8,7 +8,7 @@ A phone-friendly web app for planning a day on Rhodes, Greece. It works on both 
 - **Each place shows:** rating, cost (Free / € / €€ / €€€ with an approximate price), distance, walking time or "transport needed", how long to allow there, tips, and how to get there.
 - **Marks:** ✓ Done, ✕ Ignore (hidden from now on) and ☆ Today. Everything is saved on your phone.
 - **Tap a place** to see a photo and the Wikipedia summary, in Estonian when an Estonian article exists. There's also a link to the full article. Map pins have a *Details* button that opens the same view.
-- **Today tab:** orders your picked stops into a loop from your stay, with leg distances, total time and entry costs. One tap opens the whole route in Google Maps. You can also ask it to suggest a walking day or a day trip.
+- **Today tab:** orders your picked stops into the shortest route from your stay. The *🔁 Finish where I started* switch (on by default) makes it a round trip back to your stay, with leg distances, total time and entry costs. One tap opens the whole route in Google Maps. You can also ask it to suggest a walking day or a day trip.
 - **Languages:** English and Estonian (eesti keel). Use the picker in the top bar. It starts in Estonian on phones set to Estonian.
 - **Map tab:** OpenStreetMap with colour-coded pins and a 2 km walking circle.
 
