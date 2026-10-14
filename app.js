@@ -498,7 +498,11 @@ function placeWords(p) {
   return ref.startsWith("?") ? ref.slice(1).split(/\s+/).map(w => norm(w)) : words(p.name);
 }
 const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const titleScore = (title, ws) => ws.filter(w => w.length > 2 && norm(title).includes(w)).length;
+// A keyword counts only at the start of a word in the title ("burgh" ≠ "edinburgh").
+const titleScore = (title, ws) => {
+  const tw = norm(title).split(/[^a-z0-9]+/);
+  return ws.filter(w => w.length > 2 && tw.some(x => x.startsWith(w))).length;
+};
 
 async function api(lang, params) {
   const q = new URLSearchParams({ action: "query", format: "json", origin: "*", redirects: "1", ...params });
@@ -521,8 +525,6 @@ async function pageByTitle(lang, title) {
   const pg = Object.values((await api(lang, { titles: title, ...PAGE_PROPS })).pages || {}).find(x => !("missing" in x));
   return pg ? toPage(pg) : null;
 }
-// Is this article plausibly about this place's location?
-const nearby = (pg, p) => pg.coord ? km(pg.coord, p) <= NEAR_KM : ABOUT_RHODES.test(pg.title + " " + pg.extract);
 
 async function findEnglish(p) {
   const ref = WIKI[p.id] || "";
@@ -545,7 +547,9 @@ async function findEnglish(p) {
   const q = `${p.name} Rhodes`;
   const found = Object.values((await api("en", { generator: "search", gsrsearch: q, gsrlimit: "5", ...PAGE_PROPS })).pages || {})
     .sort((a, b) => a.index - b.index).map(toPage)
-    .find(pg => titleScore(pg.title, ws) > 0 && nearby(pg, p));
+    // Search hits must be geotagged next to the place: an untagged article (people, films…)
+    // that merely mentions Rhodes is never accepted.
+    .find(pg => titleScore(pg.title, ws) > 0 && pg.coord && km(pg.coord, p) <= NEAR_KM);
   return found || null;
 }
 
