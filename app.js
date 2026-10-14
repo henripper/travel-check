@@ -345,49 +345,96 @@ function renderPlace(id) {
 }
 
 function wikiHtml(p, w) {
-  const searchUrl = `https://${state.lang === "et" ? "et" : "en"}.wikipedia.org/w/index.php?search=${encodeURIComponent(p.name + " Rhodes")}`;
-  const searchLink = `<a class="btn" href="${searchUrl}" target="_blank" rel="noopener">🔎 ${t("wikiSearch")}</a>`;
+  const web = `https://www.google.com/search?q=${encodeURIComponent(`"${p.name}" Rhodes`)}&hl=${state.lang}`;
+  const webLink = `<a class="btn" href="${web}" target="_blank" rel="noopener">🔎 ${t("webSearch")}</a>`;
   if (!w) return `<p class="muted">📖 ${t("wikiLoading")}</p>`;
-  if (w.error) return `<p class="muted">${t("wikiOffline")}</p>${searchLink}`;
-  if (!w.title) return `<p class="muted">${t("wikiNone")}</p>${searchLink}`;
+  if (w.error) return `<p class="muted">${t("wikiOffline")}</p>${webLink}`;
+  if (!w.title) return `<p class="muted">📖 ${t("wikiNone")}</p>${webLink}`;
   return `
     <h3>📖 ${esc(w.title)}</h3>
     ${w.fallback ? `<p class="muted small">${t("wikiEnOnly")}</p>` : ""}
     <p>${esc(w.extract)}</p>
-    <a class="btn primary" href="${esc(w.url)}" target="_blank" rel="noopener">${t("wikiMore")}</a>`;
+    <a class="btn primary" href="${esc(w.url)}" target="_blank" rel="noopener">${t("wikiMore")}</a>
+    ${webLink}`;
 }
 
-// One page from the MediaWiki API: by exact title, or the top search hit.
-async function wikiPage(lang, { title, search }) {
-  const q = new URLSearchParams({
-    action: "query", format: "json", origin: "*", redirects: "1",
-    prop: "extracts|pageimages|langlinks|info", exintro: "1", explaintext: "1", exsentences: "8",
-    piprop: "thumbnail", pithumbsize: "800", lllang: "et", inprop: "url",
-  });
-  if (title) q.set("titles", title);
-  else { q.set("generator", "search"); q.set("gsrsearch", search); q.set("gsrlimit", "1"); }
+// ----- Finding the right article -----
+// Only accept an article that is geotagged near the place (or clearly about Rhodes)
+// AND whose title shares a distinctive word with the place. Otherwise show nothing.
+const GENERIC = new Set(("the of and in on at de la tou tis ton our lady saint agios agia panagia holy rhodes rhodos rodos island greece greek " +
+  "church chapel mosque street square museum castle fort fortress beach bay park village town city old new " +
+  "ancient medieval monastery temple palace tomb gate harbour harbor hill mount mountain viewpoint " +
+  "springs spring valley lake walk walls collection art modern italian ottoman").split(" "));
+const words = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  .split(/[^a-z0-9]+/).filter(w => w.length > 2 && !GENERIC.has(w));
+const NEAR_KM = 3, ABOUT_RHODES = /rhod|lindos|dodecanese/i;
+
+// Words an article title must contain to count as "about this place".
+function placeWords(p) {
+  const ref = WIKI[p.id] || "";
+  return ref.startsWith("?") ? ref.slice(1).split(/\s+/).map(w => norm(w)) : words(p.name);
+}
+const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const titleScore = (title, ws) => ws.filter(w => w.length > 2 && norm(title).includes(w)).length;
+
+async function api(lang, params) {
+  const q = new URLSearchParams({ action: "query", format: "json", origin: "*", redirects: "1", ...params });
   const res = await fetch(`https://${lang}.wikipedia.org/w/api.php?${q}`);
   if (!res.ok) throw new Error(res.status);
-  const pages = Object.values((await res.json()).query?.pages || {});
-  const pg = pages.find(x => !("missing" in x));
-  if (!pg) return null;
+  return (await res.json()).query || {};
+}
+
+const PAGE_PROPS = {
+  prop: "extracts|pageimages|langlinks|info|coordinates", exintro: "1", explaintext: "1", exsentences: "8",
+  piprop: "thumbnail", pithumbsize: "800", lllang: "et", inprop: "url", colimit: "1",
+};
+function toPage(pg) {
   return {
-    title: pg.title, extract: pg.extract || "", url: pg.fullurl,
-    img: pg.thumbnail?.source, et: pg.langlinks?.[0]?.["*"],
+    title: pg.title, extract: pg.extract || "", url: pg.fullurl, img: pg.thumbnail?.source,
+    et: pg.langlinks?.[0]?.["*"], coord: pg.coordinates?.[0] && { lat: pg.coordinates[0].lat, lng: pg.coordinates[0].lon },
   };
+}
+async function pageByTitle(lang, title) {
+  const pg = Object.values((await api(lang, { titles: title, ...PAGE_PROPS })).pages || {}).find(x => !("missing" in x));
+  return pg ? toPage(pg) : null;
+}
+// Is this article plausibly about this place's location?
+const nearby = (pg, p) => pg.coord ? km(pg.coord, p) <= NEAR_KM : ABOUT_RHODES.test(pg.title + " " + pg.extract);
+
+async function findEnglish(p) {
+  const ref = WIKI[p.id] || "";
+  const ws = placeWords(p);
+
+  // 1. A title chosen by hand — still double-checked.
+  if (ref && !ref.startsWith("?")) {
+    const pg = await pageByTitle("en", ref);
+    if (pg && (pg.coord ? km(pg.coord, p) <= 15 : ABOUT_RHODES.test(pg.title + " " + pg.extract))) return pg;
+  }
+
+  // 2. Geotagged articles around the place whose title matches its name.
+  const geo = (await api("en", { list: "geosearch", gscoord: `${p.lat}|${p.lng}`, gsradius: "3000", gslimit: "50" })).geosearch || [];
+  const hit = geo.map(g => ({ ...g, score: titleScore(g.title, ws) }))
+    .filter(g => g.score > 0)
+    .sort((a, b) => b.score - a.score || a.dist - b.dist)[0];
+  if (hit) return pageByTitle("en", hit.title);
+
+  // 3. Text search, but only results located near the place with a matching title.
+  const q = `${p.name} Rhodes`;
+  const found = Object.values((await api("en", { generator: "search", gsrsearch: q, gsrlimit: "5", ...PAGE_PROPS })).pages || {})
+    .sort((a, b) => a.index - b.index).map(toPage)
+    .find(pg => titleScore(pg.title, ws) > 0 && nearby(pg, p));
+  return found || null;
 }
 
 async function loadWiki(id) {
   const key = `${state.lang}:${id}`;
   if (wikiCache[key] && !wikiCache[key].error) return;
   const p = POIS.find(x => x.id === id);
-  const ref = WIKI[id] || `?${p.name} Rhodes`;
   try {
-    let en = ref.startsWith("?") ? await wikiPage("en", { search: ref.slice(1) }) : await wikiPage("en", { title: ref });
-    if (!en && !ref.startsWith("?")) en = await wikiPage("en", { search: `${p.name} Rhodes` });
+    const en = await findEnglish(p);
     let w = en || {};
     if (state.lang === "et" && en) {
-      const et = en.et ? await wikiPage("et", { title: en.et }) : null;
+      const et = en.et ? await pageByTitle("et", en.et) : null;
       // Estonian articles are often short and photo-less; borrow the English photo.
       w = et ? { ...et, img: et.img || en.img } : { ...en, fallback: true };
     }

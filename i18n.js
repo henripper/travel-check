@@ -59,8 +59,8 @@ const STRINGS = {
     details: "Details & Wikipedia",
     tapHint: "Tap a place for photos and the Wikipedia article.",
     wikiLoading: "Loading Wikipedia…", wikiMore: "Read the full article on Wikipedia",
-    wikiEnOnly: "No Estonian article — showing English.", wikiNone: "No Wikipedia article found.",
-    wikiOffline: "Couldn't load Wikipedia — check your internet connection.", wikiSearch: "Search Wikipedia",
+    wikiEnOnly: "No Estonian article — showing English.", wikiNone: "Wikipedia has no article about this exact place.",
+    wikiOffline: "Couldn't load Wikipedia — check your internet connection.", wikiSearch: "Search Wikipedia", webSearch: "Search the web",
     presets: { "Old Town": "Old Town", "New Town / Mandraki": "New Town / Mandraki" },
     cats: {
       museum: "Museum", ruins: "Ruins", castle: "Castle & walls", vista: "Vista", religious: "Church & mosque",
@@ -127,8 +127,8 @@ const STRINGS = {
     details: "Info ja Vikipeedia",
     tapHint: "Puuduta kohta, et näha fotot ja Vikipeedia artiklit.",
     wikiLoading: "Laadin Vikipeediat…", wikiMore: "Loe kogu artiklit Vikipeedias",
-    wikiEnOnly: "Eestikeelset artiklit pole — näitan ingliskeelset.", wikiNone: "Vikipeediast artiklit ei leitud.",
-    wikiOffline: "Vikipeediat ei õnnestunud laadida — kontrolli internetiühendust.", wikiSearch: "Otsi Vikipeediast",
+    wikiEnOnly: "Eestikeelset artiklit pole — näitan ingliskeelset.", wikiNone: "Vikipeedias selle koha kohta artiklit pole.",
+    wikiOffline: "Vikipeediat ei õnnestunud laadida — kontrolli internetiühendust.", wikiSearch: "Otsi Vikipeediast", webSearch: "Otsi veebist",
     presets: { "Old Town": "Vanalinn", "New Town / Mandraki": "Uuslinn / Mandraki" },
     cats: {
       museum: "Muuseum", ruins: "Varemed", castle: "Kindlused ja müürid", vista: "Vaade", religious: "Kirikud ja mošeed",
