@@ -24,7 +24,7 @@ const KEY = "rhodes-day-planner:v1";
 const state = load();
 
 function load() {
-  const def = { lang: null, loop: true, base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
+  const def = { lang: null, loop: true, custom: [], base: null, status: {}, today: [], range: 2, mustSee: true, cats: [], sort: "dist", cost: "any" };
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? Object.assign(def, JSON.parse(raw)) : def;
@@ -69,6 +69,10 @@ function applyStaticText() {
   $("#presets").innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${esc(T().presets[p.name] || p.name)}</button>`).join("");
 }
 
+// Built-in places plus the ones the user added.
+const allPois = () => [...POIS, ...state.custom];
+const findPoi = id => allPois().find(p => p.id === id);
+
 // ---------- Geo helpers ----------
 function km(a, b) {
   const R = 6371, rad = Math.PI / 180;
@@ -109,11 +113,12 @@ function costOk(p) {
   return true;
 }
 function exploreItems() {
-  const items = POIS.map(withDistance).filter(p =>
+  const items = allPois().map(withDistance).filter(p =>
     !state.status[p.id] &&
     (state.cats.length === 0 || state.cats.includes(p.cat)) &&
-    costOk(p) &&
-    (isNaN(p.d) || p.d <= state.range || (state.mustSee && p.rating >= MUST_SEE))
+    // Places you added always show, whatever the range or cost filter.
+    (p.custom || (costOk(p) &&
+    (isNaN(p.d) || p.d <= state.range || (state.mustSee && p.rating >= MUST_SEE))))
   );
   const by = {
     dist: (a, b) => a.d - b.d,
@@ -151,8 +156,8 @@ function card(p, opts = {}) {
       <div class="card-title">
         <h3>${esc(loc(p, "name"))} <span class="more">›</span></h3>
         <div class="meta">
-          ${stars(p.rating)} · ${catLabel(p.cat)} ${costPill(p)}
-          <span class="pill era">${eraLabel(p.era)}</span>
+          ${p.custom ? `<span class="pill mine">${t("addedByYou")}</span> · ${catLabel(p.cat)}` : `${stars(p.rating)} · ${catLabel(p.cat)} ${costPill(p)}
+          <span class="pill era">${eraLabel(p.era)}</span>`}
           ${beyond && p.rating >= MUST_SEE ? `<span class="pill must">${t("mustSeePill")}</span>` : ""}
         </div>
       </div>
@@ -160,7 +165,7 @@ function card(p, opts = {}) {
     </div>
     ${tr ? `<div class="travel"><span class="pill ${tr.cls}">${tr.label}</span><span class="muted">${t("allow", fmtMin(p.mins))}</span></div>` : ""}
     <p class="desc">${esc(loc(p, "desc"))}</p>
-    <p class="extra"><b>${t("cost")}:</b> ${esc(loc(p, "price"))}${p.tip ? `<br><b>${t("tip")}:</b> ${esc(loc(p, "tip"))}` : ""}${p.how ? `<br><b>${t("how")}:</b> ${esc(loc(p, "how"))}` : ""}</p>
+    <p class="extra">${p.price ? `<b>${t("cost")}:</b> ${esc(loc(p, "price"))}` : ""}${p.tip ? `<br><b>${t("tip")}:</b> ${esc(loc(p, "tip"))}` : ""}${p.how ? `<br><b>${t("how")}:</b> ${esc(loc(p, "how"))}` : ""}</p>
     <div class="actions">
       <button data-act="today" class="${inToday ? "on-today" : ""}">${t(inToday ? "onToday" : "todayBtn")}</button>
       <button data-act="done" class="${st === "done" ? "on-done" : ""}">${t("done")}</button>
@@ -193,9 +198,9 @@ function renderExplore() {
 
 function renderMine() {
   const which = document.querySelector("#mineSeg .on").dataset.status;
-  const items = POIS.filter(p => state.status[p.id] === which).map(withDistance).sort((a, b) => a.d - b.d);
-  const done = POIS.filter(p => state.status[p.id] === "done").length;
-  $("#mineCount").textContent = t("visited", done, POIS.length);
+  const items = allPois().filter(p => state.status[p.id] === which).map(withDistance).sort((a, b) => a.d - b.d);
+  const done = allPois().filter(p => state.status[p.id] === "done").length;
+  $("#mineCount").textContent = t("visited", done, allPois().length);
   $("#mineList").innerHTML = items.length
     ? items.map(p => card(p, { collapsed: true })).join("")
     : `<div class="empty">${t(which === "done" ? "noneDone" : "noneIgnored")}</div>`;
@@ -203,7 +208,7 @@ function renderMine() {
 
 // Order today's stops as a nearest-neighbour loop from the base.
 function orderedToday() {
-  let pts = state.today.map(id => POIS.find(p => p.id === id)).filter(Boolean);
+  let pts = state.today.map(findPoi).filter(Boolean);
   if (!state.base) return pts.map(p => ({ ...p, d: NaN, leg: NaN }));
   // Start with nearest-neighbour from the base…
   const route = [];
@@ -292,7 +297,7 @@ function renderToday() {
 
 function suggest(kind) {
   if (!state.base) { openBase(); return; }
-  const pool = POIS.map(withDistance).filter(p => !state.status[p.id]);
+  const pool = allPois().map(withDistance).filter(p => !state.status[p.id]);
   let pick;
   if (kind === "walk") {
     // Best-rated places within walking distance, up to ~6 hours of sightseeing.
@@ -314,6 +319,121 @@ function suggest(kind) {
   save(); renderAll();
 }
 
+// ---------- Search & adding your own places ----------
+let query = "", mapHits = null, mapState = "";  // mapState: "", "loading", "none", "error"
+
+function matches(p, q) {
+  const hay = norm([p.name, loc(p, "name"), catLabel(p.cat), p.desc || ""].join(" "));
+  return norm(q).split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+
+function renderSearch() {
+  const box = $("#searchResults");
+  const on = query.trim().length > 0;
+  box.hidden = !on;
+  $("#exploreControls").hidden = on;
+  $("#exploreCount").hidden = on;
+  $("#exploreList").hidden = on;
+  if (!on) return;
+  const q = query.trim();
+  if (/goo\.gl|maps\.app/i.test(q)) {
+    box.innerHTML = `<div class="empty">${t("shortLink")}</div>`;
+    return;
+  }
+  const found = allPois().filter(p => matches(p, q)).map(withDistance).sort((a, b) => (a.d || 0) - (b.d || 0));
+  const coords = parseCoords(q);
+  let html = `<p class="count">${found.length ? t("searchMatches", found.length) : t("searchNone")}</p>`;
+  html += found.map(p => card(p, { collapsed: true })).join("");
+  if (coords) html += `<button type="button" class="btn wide" id="addCoordsBtn">${t("addCoords")}</button>`;
+  else {
+    html += `<button type="button" class="btn wide ${found.length ? "" : "primary"}" id="mapSearchBtn">${esc(t("searchMap", q))}</button>`;
+    if (mapState === "loading") html += `<p class="muted">${t("mapSearching")}</p>`;
+    if (mapState === "none") html += `<p class="muted">${t("mapNone")}</p>`;
+    if (mapState === "error") html += `<p class="muted">${t("mapError")}</p>`;
+    if (mapHits && mapHits.length) {
+      html += `<p class="count">${t("mapResults")}</p>` + mapHits.map((h, i) => {
+        const d = state.base ? km(state.base, h) : NaN;
+        return `<div class="osm"><div><b>${esc(h.name)}</b><small>${esc(h.address)}${isNaN(d) ? "" : ` · ${fmtKm(d)}`}</small></div>
+          <button type="button" class="btn primary" data-add="${i}">${t("add")}</button></div>`;
+      }).join("");
+    }
+    html += `<button type="button" class="btn ghost wide" id="addHereBtn">${esc(t("addHere", q))}</button>`;
+  }
+  box.innerHTML = html;
+}
+
+// OpenStreetMap category → our category.
+function catFromOsm(c, type) {
+  const m = {
+    museum: "museum", gallery: "museum", aquarium: "family", zoo: "family", theme_park: "family", water_park: "family",
+    viewpoint: "vista", castle: "castle", fort: "castle", city_gate: "castle", ruins: "ruins", archaeological_site: "ruins",
+    place_of_worship: "religious", church: "religious", mosque: "religious", monastery: "religious", synagogue: "religious",
+    beach: "beach", bay: "beach", park: "nature", garden: "nature", nature_reserve: "nature", peak: "nature", spring: "nature",
+    village: "village", hamlet: "village", town: "village", marketplace: "market", restaurant: "food", cafe: "food",
+    bar: "food", winery: "food", wine: "food", monument: "oldtown", memorial: "oldtown",
+  };
+  return m[type] || (c === "shop" ? "market" : c === "natural" ? "nature" : c === "historic" ? "ruins" : "other");
+}
+
+async function mapSearch(q) {
+  mapState = "loading"; mapHits = null; renderSearch();
+  const u = new URLSearchParams({
+    format: "jsonv2", q, limit: "8", bounded: "1", viewbox: "27.65,36.50,28.30,35.85", "accept-language": state.lang || "en",
+  });
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${u}`);
+    if (!res.ok) throw new Error(res.status);
+    const rows = await res.json();
+    mapHits = rows.map(r => ({
+      name: r.name || r.display_name.split(",")[0], address: r.display_name.split(",").slice(1, 3).join(",").trim(),
+      lat: +r.lat, lng: +r.lon, cat: catFromOsm(r.category, r.type),
+    }));
+    mapState = mapHits.length ? "" : "none";
+  } catch {
+    mapState = "error";
+  }
+  if (query.trim() === q) renderSearch();
+}
+
+function addCustom({ name, lat, lng, cat, address }) {
+  const p = { id: `c${Date.now()}`, custom: true, name, lat, lng, cat: CATEGORIES[cat] ? cat : "other",
+    era: "modern", rating: 0, cost: 0, mins: 60, desc: address || "" };
+  state.custom.push(p);
+  save();
+  query = name; mapHits = null; mapState = "";
+  $("#searchInput").value = name;
+  renderAll();
+}
+function addFromMap(i) { const h = mapHits?.[i]; if (h) addCustom(h); }
+function addAtMyLocation() {
+  if (!navigator.geolocation) { alert(t("noGeo")); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => addCustom({ name: query.trim(), lat: pos.coords.latitude, lng: pos.coords.longitude, cat: "other" }),
+    err => alert(t(err.code === 1 ? "geoDenied" : "geoFail")),
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+  );
+}
+function removeCustom(id) {
+  if (!confirm(t("removeConfirm"))) return;
+  state.custom = state.custom.filter(p => p.id !== id);
+  state.today = state.today.filter(x => x !== id);
+  delete state.status[id];
+  save();
+  if ($("#placeDialog").open) $("#placeDialog").close();
+  renderAll();
+}
+// Name from a long Google Maps link: ".../place/Aquarium+of+Rhodes/@36.4..."
+function placeNameFromUrl(s) {
+  const m = s.match(/\/place\/([^/@]+)/);
+  return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
+}
+
+$("#searchInput").addEventListener("input", e => { query = e.target.value; mapHits = null; mapState = ""; renderSearch(); });
+$("#searchInput").addEventListener("keydown", e => {
+  // Enter jumps straight to the map search when nothing in the list matches.
+  if (e.key === "Enter" && query.trim() && !allPois().some(p => matches(p, query.trim())) && !parseCoords(query)) mapSearch(query.trim());
+});
+
 // ---------- Place sheet + Wikipedia ----------
 let openId = null;
 const wikiCache = {};
@@ -328,7 +448,9 @@ function openPlace(id) {
 }
 
 function renderPlace(id) {
-  const p = withDistance(POIS.find(x => x.id === id));
+  const p = findPoi(id);
+  if (!p) { $("#placeDialog").close(); return; }
+  Object.assign(p, withDistance(p));
   const w = wikiCache[`${state.lang}:${id}`];
   // Reuse the card for meta, cost, tips and buttons; show it expanded and not clickable.
   const cardHtml = card(p).replace(" data-open>", ">").replace(' <span class="more">›</span>', "");
@@ -341,6 +463,7 @@ function renderPlace(id) {
       ${w && w.img ? `<img class="photo" src="${esc(w.img)}" alt="">` : ""}
       ${cardHtml}
       <section class="wiki">${wikiHtml(p, w)}</section>
+      ${p.custom ? `<button type="button" class="btn ghost" data-remove="${p.id}">${t("removePlace")}</button>` : ""}
     </div>`;
 }
 
@@ -429,7 +552,8 @@ async function findEnglish(p) {
 async function loadWiki(id) {
   const key = `${state.lang}:${id}`;
   if (wikiCache[key] && !wikiCache[key].error) return;
-  const p = POIS.find(x => x.id === id);
+  const p = findPoi(id);
+  if (!p) return;
   try {
     const en = await findEnglish(p);
     let w = en || {};
@@ -464,7 +588,7 @@ function renderMap() {
   layer.clearLayers();
   const color = p => state.status[p.id] === "done" ? "#1b8a4b" : state.status[p.id] === "ignored" ? "#9aa0a6"
     : state.today.includes(p.id) ? "#d93025" : "#0b5ea8";
-  POIS.forEach(p => {
+  allPois().forEach(p => {
     if (state.cats.length && !state.cats.includes(p.cat)) return;
     const size = state.today.includes(p.id) ? 30 : 24;
     const icon = L.divIcon({
@@ -514,6 +638,7 @@ function renderAll() {
   applyStaticText();
   $("#baseName").textContent = state.base ? baseLabel(state.base.name) : t("setStay");
   renderExplore();
+  renderSearch();
   renderToday();
   renderMine();
   if (map && $("#view-map").classList.contains("active")) renderMap();
@@ -534,6 +659,13 @@ function act(id, what) {
 document.addEventListener("click", e => {
   const btn = e.target.closest("[data-act]");
   if (btn) { act(btn.closest("[data-id]").dataset.id, btn.dataset.act); return; }
+  const add = e.target.closest("[data-add]");
+  if (add) { addFromMap(+add.dataset.add); return; }
+  const rm = e.target.closest("[data-remove]");
+  if (rm) { removeCustom(rm.dataset.remove); return; }
+  if (e.target.closest("#mapSearchBtn")) { mapSearch(query.trim()); return; }
+  if (e.target.closest("#addHereBtn")) { addAtMyLocation(); return; }
+  if (e.target.closest("#addCoordsBtn")) { const c = parseCoords(query); addCustom({ name: placeNameFromUrl(query) || t("myStay"), lat: c.lat, lng: c.lng, cat: "other" }); return; }
   const pop = e.target.closest("[data-pop]");
   if (pop) { openPlace(pop.dataset.pop); return; }
   if (e.target.closest("a")) return;

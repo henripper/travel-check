@@ -18,6 +18,7 @@ const CATEGORIES = {
   market:   { label: "Market",        icon: "🛍️" },
   family:   { label: "Family",        icon: "🐠" },
   food:     { label: "Food & wine",   icon: "🍷" },
+  other:    { label: "Other",         icon: "📌" },
 };
 
 const ERAS = {

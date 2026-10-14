@@ -14,7 +14,7 @@
   <link rel="icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <header class="topbar">
@@ -31,7 +31,9 @@
   <main>
     <!-- Explore -->
     <section id="view-explore" class="view active">
-      <div class="controls">
+      <input id="searchInput" class="search" type="search" enterkeyhint="search" autocomplete="off" data-i18n-ph="searchPh" placeholder="Search places, or find one to add…">
+      <div id="searchResults" hidden></div>
+      <div class="controls" id="exploreControls">
         <div class="seg" id="rangeSeg" role="group" aria-label="Range">
           <button data-range="2" data-i18n="range2">🚶 ≤2 km</button>
           <button data-range="5">≤5 km</button>
@@ -143,9 +145,9 @@
   </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="pois.js?v=6"></script>
-  <script src="pois-et.js?v=6"></script>
-  <script src="i18n.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="pois.js?v=7"></script>
+  <script src="pois-et.js?v=7"></script>
+  <script src="i18n.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
