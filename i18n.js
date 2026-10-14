@@ -53,6 +53,11 @@ const STRINGS = {
     geoFail: "Couldn't get your location. Try again outdoors, or pick an area below.",
     coordErr: "Couldn't read coordinates — try the format 36.4445, 28.2265",
     language: "Language",
+    details: "Details & Wikipedia",
+    tapHint: "Tap a place for photos and the Wikipedia article.",
+    wikiLoading: "Loading Wikipedia…", wikiMore: "Read the full article on Wikipedia",
+    wikiEnOnly: "No Estonian article — showing English.", wikiNone: "No Wikipedia article found.",
+    wikiOffline: "Couldn't load Wikipedia — check your internet connection.", wikiSearch: "Search Wikipedia",
     presets: { "Old Town": "Old Town", "New Town / Mandraki": "New Town / Mandraki" },
     cats: {
       museum: "Museum", ruins: "Ruins", castle: "Castle & walls", vista: "Vista", religious: "Church & mosque",
@@ -113,6 +118,11 @@ const STRINGS = {
     geoFail: "Asukohta ei õnnestunud leida. Proovi õues uuesti või vali allpool piirkond.",
     coordErr: "Koordinaate ei õnnestunud lugeda — proovi kujul 36.4445, 28.2265",
     language: "Keel",
+    details: "Info ja Vikipeedia",
+    tapHint: "Puuduta kohta, et näha fotot ja Vikipeedia artiklit.",
+    wikiLoading: "Laadin Vikipeediat…", wikiMore: "Loe kogu artiklit Vikipeedias",
+    wikiEnOnly: "Eestikeelset artiklit pole — näitan ingliskeelset.", wikiNone: "Vikipeediast artiklit ei leitud.",
+    wikiOffline: "Vikipeediat ei õnnestunud laadida — kontrolli internetiühendust.", wikiSearch: "Otsi Vikipeediast",
     presets: { "Old Town": "Vanalinn", "New Town / Mandraki": "Uuslinn / Mandraki" },
     cats: {
       museum: "Muuseum", ruins: "Varemed", castle: "Kindlused ja müürid", vista: "Vaade", religious: "Kirikud ja mošeed",

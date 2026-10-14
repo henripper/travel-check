@@ -145,11 +145,11 @@ function card(p, opts = {}) {
   const beyond = !isNaN(p.d) && p.d > state.range;
   const mode = tr && tr.kind !== "ride" ? "walking" : "driving";
   return `
-  <article class="card ${opts.collapsed ? "collapsed" : ""} ${st || ""}" data-id="${p.id}">
-    <div class="card-head" data-toggle>
+  <article class="card ${opts.collapsed ? "collapsed" : ""} ${st || ""}" data-id="${p.id}" data-open>
+    <div class="card-head">
       <div class="card-icon">${cat.icon}</div>
       <div class="card-title">
-        <h3>${esc(loc(p, "name"))}</h3>
+        <h3>${esc(loc(p, "name"))} <span class="more">›</span></h3>
         <div class="meta">
           ${stars(p.rating)} · ${catLabel(p.cat)} ${costPill(p)}
           <span class="pill era">${eraLabel(p.era)}</span>
@@ -183,9 +183,9 @@ function renderExplore() {
   const items = exploreItems();
   const inRange = items.filter(p => !(p.d > state.range)).length;
   const hidden = Object.keys(state.status).length;
-  $("#exploreCount").textContent = state.base
+  $("#exploreCount").innerHTML = (state.base
     ? t("withinRange", inRange) + (items.length > inRange ? t("mustFurther", items.length - inRange) : "") + (hidden ? t("hiddenCount", hidden) : "")
-    : t("setStayHint");
+    : t("setStayHint")) + `<br><span class="small">${t("tapHint")}</span>`;
   $("#exploreList").innerHTML = items.length
     ? items.map(p => card(p, { collapsed: true })).join("")
     : `<div class="empty">${t("emptyExplore")}</div>`;
@@ -293,6 +293,95 @@ function suggest(kind) {
   save(); renderAll();
 }
 
+// ---------- Place sheet + Wikipedia ----------
+let openId = null;
+const wikiCache = {};
+
+function openPlace(id) {
+  openId = id;
+  renderPlace(id);
+  const dlg = $("#placeDialog");
+  if (!dlg.open) dlg.showModal();
+  dlg.scrollTop = 0;
+  loadWiki(id);
+}
+
+function renderPlace(id) {
+  const p = withDistance(POIS.find(x => x.id === id));
+  const w = wikiCache[`${state.lang}:${id}`];
+  // Reuse the card for meta, cost, tips and buttons; show it expanded and not clickable.
+  const cardHtml = card(p).replace(" data-open>", ">").replace(' <span class="more">›</span>', "");
+  $("#placeBody").innerHTML = `
+    <div class="sheet-top">
+      <h2>${CATEGORIES[p.cat].icon} ${esc(loc(p, "name"))}</h2>
+      <button type="button" id="closePlace" aria-label="${t("close")}">✕</button>
+    </div>
+    <div class="sheet-wrap">
+      ${w && w.img ? `<img class="photo" src="${esc(w.img)}" alt="">` : ""}
+      ${cardHtml}
+      <section class="wiki">${wikiHtml(p, w)}</section>
+    </div>`;
+}
+
+function wikiHtml(p, w) {
+  const searchUrl = `https://${state.lang === "et" ? "et" : "en"}.wikipedia.org/w/index.php?search=${encodeURIComponent(p.name + " Rhodes")}`;
+  const searchLink = `<a class="btn" href="${searchUrl}" target="_blank" rel="noopener">🔎 ${t("wikiSearch")}</a>`;
+  if (!w) return `<p class="muted">📖 ${t("wikiLoading")}</p>`;
+  if (w.error) return `<p class="muted">${t("wikiOffline")}</p>${searchLink}`;
+  if (!w.title) return `<p class="muted">${t("wikiNone")}</p>${searchLink}`;
+  return `
+    <h3>📖 ${esc(w.title)}</h3>
+    ${w.fallback ? `<p class="muted small">${t("wikiEnOnly")}</p>` : ""}
+    <p>${esc(w.extract)}</p>
+    <a class="btn primary" href="${esc(w.url)}" target="_blank" rel="noopener">${t("wikiMore")}</a>`;
+}
+
+// One page from the MediaWiki API: by exact title, or the top search hit.
+async function wikiPage(lang, { title, search }) {
+  const q = new URLSearchParams({
+    action: "query", format: "json", origin: "*", redirects: "1",
+    prop: "extracts|pageimages|langlinks|info", exintro: "1", explaintext: "1", exsentences: "8",
+    piprop: "thumbnail", pithumbsize: "800", lllang: "et", inprop: "url",
+  });
+  if (title) q.set("titles", title);
+  else { q.set("generator", "search"); q.set("gsrsearch", search); q.set("gsrlimit", "1"); }
+  const res = await fetch(`https://${lang}.wikipedia.org/w/api.php?${q}`);
+  if (!res.ok) throw new Error(res.status);
+  const pages = Object.values((await res.json()).query?.pages || {});
+  const pg = pages.find(x => !("missing" in x));
+  if (!pg) return null;
+  return {
+    title: pg.title, extract: pg.extract || "", url: pg.fullurl,
+    img: pg.thumbnail?.source, et: pg.langlinks?.[0]?.["*"],
+  };
+}
+
+async function loadWiki(id) {
+  const key = `${state.lang}:${id}`;
+  if (wikiCache[key] && !wikiCache[key].error) return;
+  const p = POIS.find(x => x.id === id);
+  const ref = WIKI[id] || `?${p.name} Rhodes`;
+  try {
+    let en = ref.startsWith("?") ? await wikiPage("en", { search: ref.slice(1) }) : await wikiPage("en", { title: ref });
+    if (!en && !ref.startsWith("?")) en = await wikiPage("en", { search: `${p.name} Rhodes` });
+    let w = en || {};
+    if (state.lang === "et" && en) {
+      const et = en.et ? await wikiPage("et", { title: en.et }) : null;
+      // Estonian articles are often short and photo-less; borrow the English photo.
+      w = et ? { ...et, img: et.img || en.img } : { ...en, fallback: true };
+    }
+    wikiCache[key] = w;
+  } catch {
+    wikiCache[key] = { error: true };
+  }
+  if (openId === id && $("#placeDialog").open) renderPlace(id);
+}
+
+$("#placeDialog").addEventListener("click", e => {
+  if (e.target.id === "closePlace" || e.target === e.currentTarget) e.currentTarget.close();
+});
+$("#placeDialog").addEventListener("close", () => { openId = null; });
+
 // ---------- Map ----------
 let map, layer;
 function renderMap() {
@@ -316,7 +405,7 @@ function renderMap() {
     });
     const d = state.base ? km(state.base, p) : NaN;
     L.marker([p.lat, p.lng], { icon }).addTo(layer).bindPopup(
-      `<b>${esc(loc(p, "name"))}</b>★ ${dec(p.rating.toFixed(1))} · ${p.cost ? "€".repeat(p.cost) : t("free")}${isNaN(d) ? "" : ` · ${fmtKm(d)}<br>${travel(d).label}`}`
+      `<b>${esc(loc(p, "name"))}</b>★ ${dec(p.rating.toFixed(1))} · ${p.cost ? "€".repeat(p.cost) : t("free")}${isNaN(d) ? "" : ` · ${fmtKm(d)}<br>${travel(d).label}`}<br><button type="button" class="btn" data-pop="${p.id}" style="margin-top:6px;padding:6px 10px">📖 ${t("details")}</button>`
     );
   });
   if (state.base) {
@@ -371,13 +460,17 @@ function act(id, what) {
     if (what === "ignored" && state.status[id]) state.today = state.today.filter(x => x !== id);
   }
   save(); renderAll();
+  if ($("#placeDialog").open) renderPlace(openId);
 }
 
 document.addEventListener("click", e => {
   const btn = e.target.closest("[data-act]");
-  if (btn) { act(btn.closest(".card").dataset.id, btn.dataset.act); return; }
-  const head = e.target.closest("[data-toggle]");
-  if (head) head.closest(".card").classList.toggle("collapsed");
+  if (btn) { act(btn.closest("[data-id]").dataset.id, btn.dataset.act); return; }
+  const pop = e.target.closest("[data-pop]");
+  if (pop) { openPlace(pop.dataset.pop); return; }
+  if (e.target.closest("a")) return;
+  const c = e.target.closest(".card[data-open]");
+  if (c) openPlace(c.dataset.id);
 });
 
 $("#tabbar").addEventListener("click", e => {
@@ -422,6 +515,7 @@ function setLang(lang) {
   const first = !state.lang;
   state.lang = lang; save(); renderAll();
   if (map) renderMap();
+  if (openId) { renderPlace(openId); loadWiki(openId); }
   const dlg = $("#langDialog");
   if (dlg.open) dlg.close();
   if (first && !state.base) openBase();
